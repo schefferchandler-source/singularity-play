@@ -969,12 +969,10 @@ canvas.chart {
       if (a.e < 4 && a.e >= -2) return trimNum(bnum(a), dp);
       return a.m.toFixed(2) + "e" + a.e;
     }
+    // digits mode: real comma-grouped numbers up to quadrillions, then compact
+    if (a.e < 0) return trimNum(bnum(a), 3); // small fractions keep 3 decimals
     if (a.e < 3) return trimNum(bnum(a), a.e >= 2 ? 0 : dp);
-    var g = Math.floor(a.e / 3);
-    if (g < NAMES.length) {
-      var v = a.m * Math.pow(10, a.e - 3 * g);
-      return trimNum(v, v >= 100 ? 0 : v >= 10 ? 1 : 2) + " " + NAMES[g];
-    }
+    if (a.e < 15) return Math.round(bnum(a)).toLocaleString("en-US");
     return a.m.toFixed(2) + "e" + a.e;
   }
   function trimNum(v, dp) {
@@ -3520,7 +3518,7 @@ canvas.chart {
       '<div id="ticker"><div id="tickerIn"></div></div>' +
       "<header>" +
       '<div><div id="epochBadge"></div><div id="epochSub"></div></div>' +
-      '<div class="hstat"><div class="v" id="hMoney"></div><div class="l">Funds</div></div>' +
+      '<div class="hstat"><div class="v" id="hMoney"></div><div class="l">Capital</div></div>' +
       '<div class="hstat"><div class="v" id="hRev"></div><div class="l">Revenue /s</div></div>' +
       '<div class="hstat" id="hCapWrap"><div class="v accent" id="hCap"></div><div class="l">Capability</div></div>' +
       '<div class="hstat" id="hUsersWrap" style="display:none"><div class="v" id="hUsers"></div><div class="l">Users</div></div>' +
@@ -4160,14 +4158,19 @@ canvas.chart {
       $("sInferV").textContent = Math.round(S.split.infer * 100) + "%";
       $("sInterpV").textContent = Math.round(S.split.interp * 100) + "%";
 
-      $("mLoss").textContent = d.L.toFixed(4) + "  (floor " + G.BAL.E + ")";
-      $("mCap").textContent = fmt(d.cap);
-      $("mN").textContent = isFinite(d.logN)
-        ? fmt(G.bl(d.logN)) + (G.lv(S, "a_tform") ? "" : " (capped)")
-        : "0";
-      $("mD").textContent = isFinite(d.logD)
-        ? fmt(G.bl(d.logD)) + " @ q" + d.trainedQ.toFixed(2)
-        : "0";
+      if (!isFinite(d.logCeff)) {
+        // no model trained yet: don't show the raw formula's nonsense values
+        $("mLoss").textContent = "— no training run yet";
+        $("mCap").textContent = "—";
+        $("mN").textContent = "—";
+        $("mD").textContent = "—";
+      } else {
+        $("mLoss").textContent = d.L.toFixed(4) + "  (floor " + G.BAL.E + ")";
+        $("mCap").textContent = fmt(d.cap);
+        $("mN").textContent =
+          fmt(G.bl(d.logN)) + (G.lv(S, "a_tform") ? "" : " (capped)");
+        $("mD").textContent = fmt(G.bl(d.logD)) + " @ q" + d.trainedQ.toFixed(2);
+      }
       $("mCum").textContent = fmt(S.cumFlops);
       $("mStarveRow").style.display =
         G.bcmp(S.data, G.bn(Math.max(1, d.dataRate) * 5)) < 0 &&
@@ -4816,7 +4819,7 @@ canvas.chart {
     var r = h("div", { cls: "c" });
     var bNamed = h("button", {
       cls: "tiny" + (S.fmtMode !== "sci" ? " on" : ""),
-      text: "Named (1.5 Septillion)",
+      text: "Digits (1,234,567)",
     });
     var bSci = h("button", {
       cls: "tiny" + (S.fmtMode === "sci" ? " on" : ""),
@@ -5296,11 +5299,20 @@ canvas.chart {
       var builtNow = globeBuilt(globeProgress(d), d);
       UI.blips = UI.blips || [];
       var nNew = Math.min(4, 1 + Math.floor(Math.log10(1 + sig - UI.globeSig)));
-      for (var b = 0; b < nNew; b++)
-        UI.blips.push({
-          i: Math.floor(Math.random() * Math.min(700, builtNow + 8)),
-          t0: performance.now(),
-        });
+      var rotNow = S.t * 0.05;
+      for (var b = 0; b < nNew; b++) {
+        // pick a site on the visible hemisphere so the blip is actually seen
+        var idx = 0,
+          tries = 0,
+          ptsB = globePoints();
+        do {
+          idx = Math.floor(Math.random() * Math.min(700, builtNow + 8));
+          var zz =
+            Math.cos(ptsB[idx][0]) * Math.cos(ptsB[idx][1] + rotNow);
+          tries++;
+        } while (zz < 0.15 && tries < 15);
+        UI.blips.push({ i: idx, t0: performance.now() });
+      }
     }
     UI.globeSig = sig;
     // phase meter
@@ -5380,7 +5392,7 @@ canvas.chart {
     // purchase blips: expanding rings where something just got built
     var now = performance.now();
     UI.blips = (UI.blips || []).filter(function (bl) {
-      return now - bl.t0 < 900;
+      return now - bl.t0 < 1500;
     });
     UI.blips.forEach(function (bl) {
       var pp = pts[bl.i];
@@ -5389,7 +5401,7 @@ canvas.chart {
         z2 = Math.cos(pp[0]) * Math.cos(lon2),
         y2 = Math.sin(pp[0]);
       if (z2 < 0.03) return;
-      var age = (now - bl.t0) / 900;
+      var age = (now - bl.t0) / 1500;
       ctx.strokeStyle = cAccent;
       ctx.globalAlpha = 1 - age;
       ctx.beginPath();
