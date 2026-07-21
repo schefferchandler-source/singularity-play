@@ -679,6 +679,28 @@ input[type="range"] {
   color: var(--bad);
 }
 
+/* "new element" badge: pulses until hovered */
+.newbadge {
+  display: inline-block;
+  margin-left: 6px;
+  color: var(--bg);
+  background: var(--accent);
+  border-radius: 50%;
+  width: 14px;
+  height: 14px;
+  line-height: 14px;
+  text-align: center;
+  font-weight: bold;
+  font-size: 10px;
+  animation: npulse 1.2s ease-in-out infinite;
+}
+@keyframes npulse {
+  50% {
+    transform: scale(1.3);
+    opacity: 0.65;
+  }
+}
+
 /* ghost cursor (takeoff: the game plays itself) */
 #ghost {
   position: fixed;
@@ -1981,6 +2003,7 @@ canvas.chart {
         return false;
       }),
       flags: { winter: false, wall: false, offline: false },
+      seen: {}, // UI progressive-disclosure latches + "new element" badges
       events: [], // active timed events: {id, tLeft, mult}
       news: [],
       newsT: 0,
@@ -2975,6 +2998,7 @@ canvas.chart {
       ns.flags.wall = s.flags.wall;
       ns.flags.winter = s.flags.winter;
       ns.prods = s.prods;
+      ns.seen = s.seen;
       ns.swarm = s.swarm;
       ns.algoLog = s.algoLog;
       ns.algoDoublings = s.algoDoublings;
@@ -3012,6 +3036,7 @@ canvas.chart {
       });
       ns.seed = s.seed;
       ns.stats = s.stats;
+      ns.seen = s.seen; // the player has met the UI; don't re-badge everything
       if (!s.pace.ascend1) ns.pace.ascend1 = s.t;
       ns.prevPace = s.pace;
       pushNews(
@@ -3832,6 +3857,9 @@ canvas.chart {
           "</h2><p>" +
           esc(meta.sub) +
           "</p>" +
+          (ep === 2
+            ? '<p class="sub">Eras of this story — <b>epochs</b> — now mark your progress. Six more lie ahead, each stranger than the last.</p>'
+            : "") +
           (ep === 4
             ? '<p class="warn">Capability now compounds on its own. Watch the cursor — it isn\'t yours anymore.</p>'
             : "") +
@@ -4017,6 +4045,29 @@ canvas.chart {
         " you already carry.</p>" +
         r.html,
       "fanfare",
+    );
+    r.wire();
+  }
+
+  /* ---------------- intro: the hook into the first loop ---------------- */
+  function introModal() {
+    var r = btnRow([
+      {
+        t: "Start typing",
+        fn: function () {
+          S.seen.intro = true;
+          closeModal();
+        },
+        primary: true,
+      },
+    ]);
+    showModal(
+      "<h2>PALO ALTO, 1985</h2>" +
+        "<p>You run a tiny AI lab above a print shop. The field's big idea: intelligence is just <b>rules</b>. Write down enough IF-THEN statements and the machine will think.</p>" +
+        "<p>Banks and hospitals pay real money for <i>expert systems</i> — software that bottles what their best people know.</p>" +
+        '<p class="accent"><b>Goal:</b> WRITE CODE (SPACE) to earn consulting fees → spend them to ENCODE RULES → rules earn contracts on their own. Rules break sometimes; repair them.</p>' +
+        '<p class="sub">Build the rule base. See how far hand-written intelligence can go.</p>' +
+        r.html,
     );
     r.wire();
   }
@@ -4208,13 +4259,38 @@ canvas.chart {
     if (UI.tab === "stats" && !UI.modalOpen) renderStatsInto($("tabBody"), d);
   }
 
+  /* "!" badge on a newly revealed element; hovering it marks it seen forever */
+  function badgeFor(el, key, hostSel) {
+    if (!el || el.style.display === "none") return;
+    var host = (hostSel && el.querySelector(hostSel)) || el.querySelector("h3") || el;
+    var existing = host.querySelector(".newbadge");
+    if (S.seen[key]) {
+      if (existing) existing.remove();
+      return;
+    }
+    if (!existing) host.appendChild(h("span", { cls: "newbadge", text: "!" }));
+    if (!el._newWired) {
+      el._newWired = true;
+      el.addEventListener("mouseenter", function () {
+        S.seen[key] = true;
+        var b = host.querySelector(".newbadge");
+        if (b) b.remove();
+      });
+    }
+  }
+
   /* ---------------- render: slow (structural, 2 Hz) ---------------- */
   function renderSlow() {
     var d = G.derive(S);
     var meta = EPOCH_META[S.epoch];
+    // epochs are only a concept once the second one arrives (or on NG+)
+    var epochsKnown = S.epoch >= 2 || S.ascensions > 0;
     $("epochBadge").textContent =
-      meta.nm + (S.fork ? " · " + S.fork.toUpperCase() : "");
+      (epochsKnown ? meta.nm : "SYMBOLIC AI") +
+      (S.fork ? " · " + S.fork.toUpperCase() : "");
     $("epochSub").textContent = meta.sub;
+    $("hCapWrap").style.display = S.epoch >= 2 ? "" : "none";
+    $("msStrip").style.display = S.epoch >= 2 ? "" : "none";
     $("clickBtn").innerHTML =
       meta.click +
       '<span class="kbd">[SPACE / D]  ' +
@@ -4243,6 +4319,43 @@ canvas.chart {
     $("swRateRow").style.display = S.epoch >= 7 ? "" : "none";
     $("debugTabBtn").style.display = UI.debug ? "" : "none";
     if (UI.tab === "debug" && !UI.debug) UI.tab = "research";
+
+    // progressive disclosure: tabs appear when their mechanic exists
+    var prestigeVisible =
+      G.hasMs(S, "chatbot") || S.distills > 0 || S.ascensions > 0;
+    var prestigeBtn = document.querySelector('[data-tab="prestige"]');
+    prestigeBtn.style.display = prestigeVisible ? "" : "none";
+    var statsBtn = document.querySelector('[data-tab="stats"]');
+    statsBtn.style.display = S.epoch >= 2 ? "" : "none";
+    if (
+      (UI.tab === "prestige" && !prestigeVisible) ||
+      (UI.tab === "stats" && S.epoch < 2)
+    )
+      UI.tab = "research";
+
+    // cooling panel appears the first time power pressure makes it matter
+    if (S.cool > 0 || (S.epoch >= 2 && d.facMW > 0.5 * d.mwCap))
+      S.seen.revCool = true;
+    $("pCool").style.display = S.epoch >= 2 && S.seen.revCool ? "" : "none";
+    // bulk-buy toggles appear once the fleet is worth bulk-buying
+    if (totalChipsVis >= 10) S.seen.revBuyAmt = true;
+    $("buyAmtWrap").style.display = S.seen.revBuyAmt ? "" : "none";
+
+    // "!" badges on newly introduced elements (clear on hover)
+    badgeFor($("pData"), "nData");
+    badgeFor($("pCompute"), "nCompute");
+    badgeFor($("pHw"), "nHw");
+    badgeFor($("pPower"), "nPower");
+    badgeFor($("pCool"), "nCool");
+    badgeFor($("pLab"), "nLab");
+    badgeFor($("pModel"), "nModel");
+    badgeFor($("pProducts"), "nProducts");
+    badgeFor($("pAgents"), "nAgents");
+    badgeFor($("pAlign"), "nAlign");
+    badgeFor($("pGlobe"), "nGlobe");
+    badgeFor(prestigeBtn, "nPrestige");
+    badgeFor($("msStrip"), "nMs", ".pl");
+    if (G.lv(S, "t_laws") > 0) badgeFor($("mAllocWrap"), "nAlloc", "label");
     $("sInterpWrap").style.display = S.epoch >= 3 ? "" : "none";
     $("mAllocWrap").style.display = G.lv(S, "t_laws") > 0 ? "" : "none";
     $("mKaplanNote").textContent =
@@ -5494,6 +5607,7 @@ canvas.chart {
     renderFast();
 
     if (offSum) offlineModal(offSum);
+    if (!S.seen.intro && S.epoch === 1 && S.t < 300 && !offSum) introModal();
     if (S.ended === "loss") {
       UI.lostShown = false;
     }
