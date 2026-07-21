@@ -1,0 +1,5561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SINGULARITY — an ML-accurate incremental</title>
+<style>
+/* ============ SINGULARITY — one grid, seven skins ============ */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+html,
+body {
+  height: 100%;
+}
+body {
+  --bg: #041004;
+  --panel: #06180699;
+  --panel2: #0a220a;
+  --ink: #7dff7d;
+  --dim: #3f9c3f;
+  --accent: #b6ff00;
+  --warn: #ffcc00;
+  --bad: #ff5c5c;
+  --good: #66ffcc;
+  --border: #1d5c1d;
+  --btn: #0c2b0c;
+  --btnink: #9dff9d;
+  --radius: 0px;
+  --font: "Courier New", ui-monospace, monospace;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: 13px;
+  overflow-x: hidden;
+  transition: background 1.2s;
+}
+button {
+  font-family: inherit;
+}
+
+/* ---------- epoch skins ---------- */
+body.e2 {
+  --bg: #eef3fa;
+  --panel: #ffffffee;
+  --panel2: #f2f6fc;
+  --ink: #23364d;
+  --dim: #7d90a8;
+  --accent: #2278d4;
+  --warn: #c77b00;
+  --bad: #d43a3a;
+  --good: #1e9e6e;
+  --border: #c8d6e8;
+  --btn: #e3edf9;
+  --btnink: #1d4f8f;
+  --radius: 8px;
+  --font: Verdana, Geneva, sans-serif;
+  font-size: 12.5px;
+}
+body.e3,
+body.e4 {
+  --bg: #0e1116;
+  --panel: #161b22ee;
+  --panel2: #1c232d;
+  --ink: #dbe4ee;
+  --dim: #67707c;
+  --accent: #3fb6f0;
+  --warn: #e8b33e;
+  --bad: #ef5b5b;
+  --good: #43d9a3;
+  --border: #2a3340;
+  --btn: #1f2835;
+  --btnink: #cfe4f5;
+  --radius: 6px;
+  --font: "Helvetica Neue", Arial, sans-serif;
+}
+body.e4 {
+  --accent: #a97df0;
+  --bg: #0d0d14;
+}
+body.e5.race {
+  --bg: #140b0b;
+  --panel: #1d1010ee;
+  --panel2: #241313;
+  --ink: #f2dcdc;
+  --dim: #8a6c6c;
+  --accent: #ff4444;
+  --warn: #ffb02e;
+  --bad: #ff7070;
+  --good: #6bdca8;
+  --border: #402020;
+  --btn: #2c1515;
+  --btnink: #ffd9d9;
+  --radius: 4px;
+  --font: "Helvetica Neue", Arial, sans-serif;
+}
+body.e5.slowdown {
+  --bg: #0b1020;
+  --panel: #101830ee;
+  --panel2: #15204a;
+  --ink: #dfe6f7;
+  --dim: #6d7898;
+  --accent: #7f9ff5;
+  --warn: #e0c25a;
+  --bad: #e06767;
+  --good: #63d0aa;
+  --border: #24305c;
+  --btn: #182450;
+  --btnink: #dbe6ff;
+  --radius: 4px;
+  --font: Georgia, "Times New Roman", serif;
+}
+body.e6,
+body.e7 {
+  --bg: #05060f;
+  --panel: #0b0e22cc;
+  --panel2: #10143a;
+  --ink: #e8ecff;
+  --dim: #7a82b8;
+  --accent: #ffd166;
+  --warn: #ffb02e;
+  --bad: #ff6b8b;
+  --good: #7bf1d9;
+  --border: #232a66;
+  --btn: #141a48;
+  --btnink: #e6ebff;
+  --radius: 10px;
+  --font: "Avenir Next", "Segoe UI", sans-serif;
+}
+body.e6 {
+  background: radial-gradient(
+    1200px 700px at 70% -10%,
+    #141c52 0%,
+    #05060f 60%
+  );
+}
+body.e7 {
+  background: radial-gradient(
+    1400px 900px at 50% 120%,
+    #2a1c4f 0%,
+    #05060f 55%
+  );
+}
+
+/* CRT scanlines + glow, epoch 1 only */
+body.e1::after {
+  content: "";
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.22) 0 1px,
+    transparent 1px 3px
+  );
+  mix-blend-mode: multiply;
+}
+body.e1 .panel {
+  box-shadow: 0 0 14px rgba(60, 255, 60, 0.07) inset;
+}
+body.e1 button,
+body.e1 .panel {
+  text-shadow: 0 0 4px rgba(125, 255, 125, 0.45);
+}
+
+/* starfield, epochs 6-7 */
+#stars {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+body.e6 #stars,
+body.e7 #stars {
+  display: block;
+}
+
+/* one-time reskin flash */
+body.reskin #app {
+  animation: reskin 1.4s ease;
+}
+@keyframes reskin {
+  0% {
+    filter: brightness(3) saturate(0);
+    opacity: 0.1;
+  }
+  100% {
+    filter: none;
+    opacity: 1;
+  }
+}
+
+/* ---------- layout ---------- */
+#app {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+#ticker {
+  flex: 0 0 26px;
+  overflow: hidden;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel2);
+  font-size: 12px;
+  line-height: 26px;
+  position: relative;
+}
+#tickerIn {
+  display: inline-block;
+  padding-left: 100vw;
+  will-change: transform;
+  animation: tick 90s linear infinite;
+}
+#tickerIn > span {
+  padding-right: 130px;
+}
+@keyframes tick {
+  to {
+    transform: translateX(-100%);
+  }
+}
+#ticker .n-emerge {
+  color: var(--accent);
+  font-weight: bold;
+}
+#ticker .n-bad {
+  color: var(--bad);
+}
+#ticker .n-good {
+  color: var(--good);
+}
+#ticker .n-epoch {
+  color: var(--warn);
+  font-weight: bold;
+}
+
+header {
+  flex: 0 0 52px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+}
+#epochBadge {
+  font-weight: bold;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+  font-size: 14px;
+  white-space: nowrap;
+}
+#epochSub {
+  color: var(--dim);
+  font-size: 11px;
+}
+.hstat {
+  text-align: right;
+}
+.hstat .v {
+  font-weight: bold;
+  font-size: 14px;
+}
+.hstat .l {
+  color: var(--dim);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+#hdrSpacer {
+  flex: 1;
+}
+header .iconbtn {
+  margin-left: 4px;
+}
+
+main {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 300px 1fr 340px;
+  gap: 10px;
+  padding: 10px;
+  min-height: 0;
+}
+.col {
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  scrollbar-width: thin;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+}
+.panel h3 {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--dim);
+  margin-bottom: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.panel h3 .hint {
+  text-transform: none;
+  letter-spacing: 0;
+}
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin: 3px 0;
+}
+.row .lab {
+  color: var(--dim);
+}
+.row .val {
+  font-weight: bold;
+  text-align: right;
+}
+.sub {
+  color: var(--dim);
+  font-size: 11px;
+}
+.good {
+  color: var(--good);
+}
+.bad {
+  color: var(--bad);
+}
+.warn {
+  color: var(--warn);
+}
+.accent {
+  color: var(--accent);
+}
+
+.bar {
+  height: 8px;
+  background: var(--panel2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+  margin: 4px 0;
+}
+.bar > i {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  width: 0%;
+  transition: width 0.3s;
+}
+.bar.thin {
+  height: 5px;
+}
+.bar > i.warnfill {
+  background: var(--warn);
+}
+.bar > i.badfill {
+  background: var(--bad);
+}
+.bar > i.goodfill {
+  background: var(--good);
+}
+
+button {
+  background: var(--btn);
+  color: var(--btnink);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: 12px;
+}
+button:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+button:disabled {
+  opacity: 0.38;
+  cursor: default;
+}
+button.primary {
+  background: var(--accent);
+  color: var(--bg);
+  font-weight: bold;
+  border-color: var(--accent);
+}
+button.tiny {
+  padding: 2px 7px;
+  font-size: 11px;
+}
+.iconbtn {
+  padding: 4px 9px;
+}
+
+#clickBtn {
+  width: 100%;
+  padding: 18px 10px;
+  font-size: 16px;
+  font-weight: bold;
+  letter-spacing: 0.04em;
+  background: var(--btn);
+  border: 2px solid var(--accent);
+  color: var(--accent);
+  border-radius: var(--radius);
+  user-select: none;
+  transition: transform 0.05s;
+}
+#clickBtn:active {
+  transform: scale(0.98);
+}
+#clickBtn .kbd {
+  display: block;
+  font-size: 10px;
+  color: var(--dim);
+  font-weight: normal;
+  margin-top: 4px;
+}
+
+.buyamt {
+  display: flex;
+  gap: 4px;
+}
+.buyamt button {
+  padding: 2px 8px;
+  font-size: 11px;
+}
+.buyamt button.on {
+  background: var(--accent);
+  color: var(--bg);
+  border-color: var(--accent);
+}
+
+.upg {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 7px 9px;
+  margin-bottom: 7px;
+  background: var(--panel2);
+}
+.upg .t {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  font-weight: bold;
+}
+.upg .t .lvl {
+  color: var(--dim);
+  font-weight: normal;
+  white-space: nowrap;
+}
+.upg .d {
+  color: var(--dim);
+  font-size: 11px;
+  margin: 3px 0 6px;
+}
+.upg .c {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+}
+.upg.owned {
+  opacity: 0.5;
+}
+.upg .cost {
+  color: var(--warn);
+}
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+.tabs button.on {
+  background: var(--accent);
+  color: var(--bg);
+  border-color: var(--accent);
+}
+.branch h4 {
+  font-size: 11px;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin: 10px 0 6px;
+}
+
+.split {
+  margin: 6px 0;
+}
+.split label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--dim);
+}
+input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+.genrow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 0;
+  border-bottom: 1px dashed var(--border);
+  font-size: 12px;
+}
+.genrow:last-child {
+  border-bottom: none;
+}
+.genrow .dark {
+  color: var(--dim);
+}
+.chipgray {
+  color: var(--dim);
+}
+
+.prod {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 0;
+  border-bottom: 1px dashed var(--border);
+}
+.prod:last-child {
+  border-bottom: none;
+}
+.modeswitch button.on {
+  background: var(--accent);
+  color: var(--bg);
+}
+
+#msStrip {
+  flex: 0 0 34px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 14px;
+  border-top: 1px solid var(--border);
+  background: var(--panel);
+}
+.msdot {
+  flex: 1;
+  height: 10px;
+  border-radius: 5px;
+  background: var(--panel2);
+  border: 1px solid var(--border);
+  position: relative;
+}
+.msdot.hit {
+  background: var(--accent);
+  border-color: var(--accent);
+  box-shadow: 0 0 8px var(--accent);
+}
+.msdot .tip {
+  display: none;
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--panel2);
+  border: 1px solid var(--border);
+  padding: 4px 8px;
+  white-space: nowrap;
+  z-index: 60;
+  font-size: 11px;
+  border-radius: 4px;
+}
+.msdot:hover .tip {
+  display: block;
+}
+#msStrip .pl {
+  color: var(--dim);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  margin-right: 8px;
+}
+
+/* ---------- modal ---------- */
+#modalWrap {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.66);
+  backdrop-filter: blur(2px);
+}
+#modalWrap.show {
+  display: flex;
+}
+#modal {
+  max-width: 560px;
+  width: 92%;
+  max-height: 84vh;
+  overflow-y: auto;
+  background: var(--panel2);
+  border: 2px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 26px;
+  animation: pop 0.3s ease;
+}
+@keyframes pop {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+#modal h2 {
+  color: var(--accent);
+  margin-bottom: 12px;
+  letter-spacing: 0.04em;
+}
+#modal p {
+  margin: 8px 0;
+  line-height: 1.5;
+}
+#modal .btns {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+  flex-wrap: wrap;
+}
+#modal .btns button {
+  flex: 1;
+  padding: 10px;
+}
+#modal textarea {
+  width: 100%;
+  height: 90px;
+  background: var(--panel);
+  color: var(--ink);
+  border: 1px solid var(--border);
+  font-family: monospace;
+  font-size: 10px;
+  padding: 6px;
+}
+#modal.fanfare {
+  text-align: center;
+  border-width: 3px;
+  box-shadow: 0 0 60px var(--accent);
+}
+#modal.fanfare h2 {
+  font-size: 26px;
+}
+#modal.fanfare .big {
+  font-size: 52px;
+  margin: 10px 0;
+}
+#modal.dark {
+  border-color: var(--bad);
+  box-shadow: 0 0 80px rgba(255, 40, 40, 0.5);
+}
+#modal.dark h2 {
+  color: var(--bad);
+}
+
+/* ghost cursor (takeoff: the game plays itself) */
+#ghost {
+  position: fixed;
+  z-index: 450;
+  width: 18px;
+  height: 18px;
+  display: none;
+  pointer-events: none;
+  transition:
+    left 1.1s cubic-bezier(0.5, 0, 0.3, 1),
+    top 1.1s cubic-bezier(0.5, 0, 0.3, 1);
+}
+body.e4 #ghost,
+body.e5 #ghost,
+body.e6 #ghost,
+body.e7 #ghost {
+  display: block;
+}
+#ghost::before {
+  content: "➤";
+  color: var(--accent);
+  font-size: 16px;
+  display: block;
+  transform: rotate(-115deg);
+  opacity: 0.75;
+  text-shadow: 0 0 6px var(--accent);
+}
+.ghostflash {
+  animation: gflash 0.5s;
+}
+@keyframes gflash {
+  0% {
+    box-shadow: 0 0 0 3px var(--accent);
+  }
+  100% {
+    box-shadow: none;
+  }
+}
+
+canvas.chart {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel2);
+}
+#toast {
+  position: fixed;
+  bottom: 48px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--panel2);
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  padding: 8px 18px;
+  z-index: 600;
+  display: none;
+}
+.winterbanner {
+  border: 1px dashed var(--bad);
+  color: var(--bad);
+  padding: 8px;
+  margin-top: 8px;
+  font-size: 12px;
+  text-align: center;
+}
+.collapse {
+  border: 1px dashed var(--bad);
+  color: var(--bad);
+  padding: 6px;
+  margin-top: 6px;
+  font-size: 11px;
+}
+.freeze {
+  color: var(--bad);
+  font-size: 11px;
+}
+.statgrid {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 3px 12px;
+  font-size: 12px;
+}
+.statgrid .k {
+  color: var(--dim);
+}
+.statgrid .v {
+  text-align: right;
+  font-weight: bold;
+}
+
+</style>
+</head>
+<body class="e1">
+<script>
+/* ============================================================
+   SINGULARITY — game core (pure logic, zero DOM references)
+   Loaded by: sim/run.js (Node, CommonJS) and index.html (browser global)
+   ============================================================ */
+(function (root, factory) {
+  var api = factory();
+  if (typeof module !== "undefined" && module.exports) module.exports = api;
+  else root.Game = api;
+})(typeof self !== "undefined" ? self : this, function () {
+  "use strict";
+
+  /* ================= Big numbers (mantissa + exponent) ================= */
+  function B(m, e) {
+    if (!(this instanceof B)) return new B(m, e);
+    this.m = m;
+    this.e = e || 0;
+    this._n();
+  }
+  B.prototype._n = function () {
+    if (this.m === 0 || !isFinite(this.m)) {
+      this.m = 0;
+      this.e = 0;
+      return this;
+    }
+    if (this.m < 0) {
+      this.m = 0;
+      this.e = 0;
+      return this;
+    } // non-negative domain
+    var lg = Math.floor(Math.log10(this.m));
+    if (lg !== 0) {
+      this.m = this.m / Math.pow(10, lg);
+      this.e += lg;
+    }
+    if (this.m >= 10) {
+      this.m /= 10;
+      this.e += 1;
+    }
+    if (this.m < 1) {
+      this.m *= 10;
+      this.e -= 1;
+    }
+    return this;
+  };
+  function bn(x) {
+    // number|B -> B
+    if (x instanceof B) return x;
+    if (typeof x !== "number" || x <= 0 || !isFinite(x)) return new B(0, 0);
+    return new B(x, 0);
+  }
+  function bl(l) {
+    // from log10
+    if (!isFinite(l)) return new B(0, 0);
+    var e = Math.floor(l);
+    return new B(Math.pow(10, l - e), e);
+  }
+  function bz(a) {
+    return !a || a.m === 0;
+  }
+  function badd(a, b) {
+    a = bn(a);
+    b = bn(b);
+    if (bz(a)) return new B(b.m, b.e);
+    if (bz(b)) return new B(a.m, a.e);
+    if (a.e < b.e) {
+      var t = a;
+      a = b;
+      b = t;
+    }
+    var d = b.e - a.e;
+    if (d < -15) return new B(a.m, a.e);
+    return new B(a.m + b.m * Math.pow(10, d), a.e);
+  }
+  function bsub(a, b) {
+    // clamps at zero
+    a = bn(a);
+    b = bn(b);
+    if (bz(b)) return new B(a.m, a.e);
+    if (bcmp(a, b) <= 0) return new B(0, 0);
+    var d = b.e - a.e;
+    if (d < -15) return new B(a.m, a.e);
+    return new B(a.m - b.m * Math.pow(10, d), a.e);
+  }
+  function bmul(a, b) {
+    a = bn(a);
+    b = bn(b);
+    if (bz(a) || bz(b)) return new B(0, 0);
+    return new B(a.m * b.m, a.e + b.e);
+  }
+  function bdiv(a, b) {
+    a = bn(a);
+    b = bn(b);
+    if (bz(a) || bz(b)) return new B(0, 0);
+    return new B(a.m / b.m, a.e - b.e);
+  }
+  function bpow(a, p) {
+    a = bn(a);
+    if (bz(a)) return new B(0, 0);
+    return bl(blog(a) * p);
+  }
+  function blog(a) {
+    a = bn(a);
+    if (bz(a)) return -Infinity;
+    return Math.log10(a.m) + a.e;
+  }
+  function bcmp(a, b) {
+    a = bn(a);
+    b = bn(b);
+    if (bz(a) && bz(b)) return 0;
+    if (bz(a)) return -1;
+    if (bz(b)) return 1;
+    if (a.e !== b.e) return a.e > b.e ? 1 : -1;
+    return a.m > b.m ? 1 : a.m < b.m ? -1 : 0;
+  }
+  function bgte(a, b) {
+    return bcmp(a, b) >= 0;
+  }
+  function bnum(a) {
+    a = bn(a);
+    if (bz(a)) return 0;
+    if (a.e > 306) return Infinity;
+    return a.m * Math.pow(10, a.e);
+  }
+  function bmax(a, b) {
+    return bcmp(a, b) >= 0 ? bn(a) : bn(b);
+  }
+  function bmin(a, b) {
+    return bcmp(a, b) <= 0 ? bn(a) : bn(b);
+  }
+  function bratio(a, b) {
+    // a/b as plain number, safe for huge magnitudes
+    a = bn(a);
+    b = bn(b);
+    if (bz(b)) return Infinity;
+    if (bz(a)) return 0;
+    var d = blog(a) - blog(b);
+    if (d > 306) return Infinity;
+    if (d < -306) return 0;
+    return Math.pow(10, d);
+  }
+
+  var NAMES = [
+    "",
+    "Thousand",
+    "Million",
+    "Billion",
+    "Trillion",
+    "Quadrillion",
+    "Quintillion",
+    "Sextillion",
+    "Septillion",
+    "Octillion",
+    "Nonillion",
+    "Decillion",
+    "Undecillion",
+    "Duodecillion",
+    "Tredecillion",
+    "Quattuordecillion",
+    "Quindecillion",
+    "Sexdecillion",
+    "Septendecillion",
+    "Octodecillion",
+    "Novemdecillion",
+    "Vigintillion",
+  ];
+  function fmt(a, mode, dp) {
+    a = bn(a);
+    dp = dp === undefined ? 2 : dp;
+    if (bz(a)) return "0";
+    if (mode === "sci") {
+      if (a.e < 4 && a.e >= -2) return trimNum(bnum(a), dp);
+      return a.m.toFixed(2) + "e" + a.e;
+    }
+    if (a.e < 3) return trimNum(bnum(a), a.e >= 2 ? 0 : dp);
+    var g = Math.floor(a.e / 3);
+    if (g < NAMES.length) {
+      var v = a.m * Math.pow(10, a.e - 3 * g);
+      return trimNum(v, v >= 100 ? 0 : v >= 10 ? 1 : 2) + " " + NAMES[g];
+    }
+    return a.m.toFixed(2) + "e" + a.e;
+  }
+  function trimNum(v, dp) {
+    var s = v.toFixed(dp);
+    if (dp > 0) s = s.replace(/\.?0+$/, "");
+    return s;
+  }
+
+  /* ================= RNG (deterministic, save-friendly) ================= */
+  function rnd(s) {
+    s.seed = (s.seed + 0x6d2b79f5) | 0;
+    var t = s.seed;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  }
+
+  /* ================= Balance constants ================= */
+  var BAL = {
+    // Chinchilla loss: L(N,D) = E + A/N^alpha + B/D^beta  (real paper coefficients)
+    E: 1.69,
+    A: 406.4,
+    Bc: 410.7,
+    alpha: 0.34,
+    beta: 0.28,
+    capK: 1.0, // Capability = capK / (L - E)
+    kaplanOffset: 0.03, // pre-"Scaling Laws" silent allocation: optimal x + this (params-heavy, wastes ~30-60% compute)
+    NcapRNN: 3e8,
+    NcapPre: 1e7, // param caps: pre-RNN, RNN-era (transformers lift entirely)
+
+    // Epoch 1
+    ruleBase: 12,
+    ruleGrow: 1.33,
+    ruleIncome: 1.1,
+    ruleBreak: 0.006,
+    winterRules: 22,
+    winterT: 560,
+    winterMult: 0.22,
+    lfdCost: 2500,
+    e1Click: 2.2,
+
+    // Data
+    clickData: 4000,
+    scrCostBase: 30,
+    scrCostGrow: 2.1,
+    scrRate: 500,
+    scrRateGrow: 2.3,
+    dataWall: 6e12,
+    wallMult: 0.03,
+    cleanQ: 0.1,
+    cleanWall: 2.6,
+    licRate: 5e5,
+    licRateGrow: 30,
+    licQ: 0.95,
+    synBase: 1e7,
+    synCapExp: 0.5,
+    synSafeF: 1e24,
+    synQ: 0.88,
+    synBadQ: 0.12,
+    collapseDrain: 0.002,
+    qDecayPerOoM: 0.055,
+    qFloor: 0.35,
+    q0: 3e8,
+
+    // Revenue / money
+    revK: 2e-11,
+    preProductMult: 0.02,
+    powerPrice: 0.02, // $/s per MW grid; own-gen tiers cheaper
+    hireBase: 300,
+    hireGrow: 1.35,
+    salary: 2.5,
+
+    // Research / algorithmic efficiency
+    algoHalfBase: 300,
+    algoHalfMin: 25,
+
+    // Insight / alignment / erosion
+    insightK: 0.9,
+    alignBase: 0,
+    erosionK: 0.02,
+    erosionMax: 100,
+
+    // Backlash / water
+    waterLimit: 60,
+    backlashDecay: 0.045,
+    permitBlock: 50,
+    revBlock: 70,
+    agentFailBacklash: 0.05,
+
+    // Agents
+    relBase: 0.6,
+    relPerUp: 0.07,
+
+    // Takeoff
+    takeoffTrainPerStage: 0.6,
+    takeoffHalfCap: 8,
+
+    // Fork
+    raceTrain: 2.2,
+    raceRev: 2.0,
+    slowTrain: 0.6,
+    slowRev: 0.5,
+    govShare: 0.45,
+
+    // Swarm / endgame
+    swarmBatchRate: 0.0000045, // coverage/s per launch campaign
+    swarmCostBase: 5e13,
+    swarmCostGrow: 1.32,
+    swarmRobo: 0.000035, // coverage/s per robotic-industry level
+
+    // Prestige
+    distillLog: 0.15,
+    ascendLog: 0.25,
+    distillChipKeep: 0.1,
+
+    // Milestone step multipliers (capability x, revenue x)
+    msCap: [2, 2, 2, 2, 3, 2, 3],
+    msRev: [3, 3, 3, 2, 8, 3, 3],
+
+    offlineCap: 8 * 3600,
+  };
+
+  /* ================= Content: chip generations ================= */
+  // f: FLOP/s per chip, w: watts per chip, c: base cost $, grow: per-unit supply-curve steepness
+  // fab: chips/s fabrication limit (null = unconstrained), reqE: epoch, reqF: cumulative FLOPs
+  var GENS = [
+    {
+      id: 0,
+      nm: "Vector Board '85",
+      f: 5e8,
+      w: 400,
+      c: 25,
+      fab: null,
+      reqE: 2,
+      reqF: 0,
+    },
+    {
+      id: 1,
+      nm: "Beowulf Rack '94",
+      f: 5e10,
+      w: 600,
+      c: 220,
+      fab: null,
+      reqE: 2,
+      reqF: 0,
+    },
+    {
+      id: 2,
+      nm: "GPU Node '09",
+      f: 5e12,
+      w: 800,
+      c: 450,
+      fab: null,
+      reqE: 2,
+      reqF: 1e13,
+    },
+    {
+      id: 3,
+      nm: "TPU Pod Slice '17",
+      f: 5e14,
+      w: 2000,
+      c: 4000,
+      fab: 30,
+      reqE: 2,
+      reqF: 1e17,
+    },
+    {
+      id: 4,
+      nm: "Hopper HGX '23",
+      f: 3e16,
+      w: 5600,
+      c: 2.4e5,
+      fab: 5,
+      reqE: 2,
+      reqF: 1e21,
+    },
+    {
+      id: 5,
+      nm: "Wafer-Scale Cluster '27",
+      f: 3e18,
+      w: 60000,
+      c: 3e6,
+      fab: 5,
+      reqE: 3,
+      reqF: 2e25,
+    },
+    {
+      id: 6,
+      nm: "Photonic Fabric '31",
+      f: 5e20,
+      w: 200000,
+      c: 4e7,
+      fab: 2,
+      reqE: 4,
+      reqF: 1e27,
+    },
+    {
+      id: 7,
+      nm: "Matrioshka Node",
+      f: 1e24,
+      w: 800000,
+      c: 1e9,
+      fab: 0.8,
+      reqE: 6,
+      reqF: 0,
+      reqUp: "i_space",
+    },
+  ];
+
+  /* ================= Content: power infrastructure tiers ================= */
+  // mw: capacity, c: cost, price: $/s per facility MW, permit: subject to backlash freeze
+  var PTIERS = [
+    { nm: "Mainframe Closet", mw: 0.01, c: 0, price: 0.03, permit: false },
+    { nm: "University Cluster", mw: 0.08, c: 400, price: 0.028, permit: false },
+    { nm: "Commercial Cloud", mw: 1.2, c: 3e3, price: 0.026, permit: false },
+    { nm: "Grid Data Center", mw: 20, c: 5e4, price: 0.022, permit: true },
+    {
+      nm: "Dedicated Gas Plant",
+      mw: 150,
+      c: 1.2e6,
+      price: 0.012,
+      permit: true,
+    },
+    { nm: "Dedicated Nuclear", mw: 1500, c: 6e7, price: 0.008, permit: true },
+    { nm: "Hyperscale Campus", mw: 8000, c: 1e9, price: 0.006, permit: true },
+    {
+      nm: "Fusion Array",
+      mw: 2e5,
+      c: 4e10,
+      price: 0.001,
+      permit: false,
+      reqE: 6,
+    },
+    {
+      nm: "Orbital Solar Constellation",
+      mw: 1e7,
+      c: 2e12,
+      price: 0.0001,
+      permit: false,
+      reqE: 6,
+      reqUp: "i_space",
+      orbital: true,
+    },
+    {
+      nm: "Dyson Swarm Feed",
+      mw: 3.8e11,
+      c: 1e14,
+      price: 0,
+      permit: false,
+      reqE: 7,
+      orbital: true,
+    },
+  ];
+
+  /* ================= Content: cooling tiers (PUE is the real metric) ================= */
+  // pue: facility/IT power ratio, wf: liters/s per MW of heat rejected
+  var CTIERS = [
+    { nm: "CRAC Air Cooling", pue: 2.0, wf: 1.2, c: 0 },
+    { nm: "Hot/Cold Aisle", pue: 1.7, wf: 1.0, c: 800 },
+    { nm: "Direct Liquid Loop", pue: 1.42, wf: 1.9, c: 3e4 },
+    { nm: "Immersion Cooling", pue: 1.22, wf: 1.1, c: 5e6 },
+    { nm: "Two-Phase Immersion", pue: 1.12, wf: 0.7, c: 2e8 },
+    { nm: "Orbital Radiators", pue: 1.04, wf: 0, c: 1e12, reqOrbital: true },
+  ];
+
+  /* ================= Content: emergence milestones (real-history cumulative FLOPs) ================= */
+  var MILESTONES = [
+    {
+      f: 1e17,
+      id: "alexnet",
+      nm: "Reliable Image Recognition",
+      blurb: "The AlexNet moment — vision suddenly works.",
+    },
+    {
+      f: 1e21,
+      id: "text",
+      nm: "Coherent Paragraphs",
+      blurb: "The model writes whole paragraphs that hold together.",
+    },
+    {
+      f: 3e23,
+      id: "fewshot",
+      nm: "Few-Shot In-Context Learning",
+      blurb:
+        "Show it three examples and it learns the task. Nobody trained it to.",
+    },
+    {
+      f: 1e24,
+      id: "cot",
+      nm: "Chain-of-Thought Reasoning",
+      blurb: '"Let\'s think step by step" starts actually working.',
+    },
+    {
+      f: 2e25,
+      id: "chatbot",
+      nm: "Assistant-Grade Chat",
+      blurb: "THE CHATBOT MOMENT. A hundred million users in weeks.",
+    },
+    {
+      f: 1e26,
+      id: "tools",
+      nm: "Tool Use & Agency",
+      blurb: "The model calls APIs, browses, executes. It acts.",
+    },
+    {
+      f: 1e27,
+      id: "automl",
+      nm: "Automated ML Research",
+      blurb: "The model designs its own successor experiments.",
+    },
+  ];
+
+  /* ================= Content: upgrades / skill tree =================
+   br: architecture | training | data | infra | align | agents | paradigm | fork | swarm
+   cost: {m: $, r: research, i: insight}; grow: per-level cost multiplier; max: levels
+   req(s): visibility+purchase gate. Effects are read declaratively in derive()/tick(). */
+  var UPS = [
+    // --- Epoch 1 ---
+    {
+      id: "e1_debug",
+      br: "paradigm",
+      nm: "Symbolic Debugger",
+      desc: "Rules break 3x less often.",
+      cost: { m: 90 },
+      max: 1,
+      req: function (s) {
+        return s.epoch === 1 && s.rules >= 4;
+      },
+    },
+    {
+      id: "lfd",
+      br: "paradigm",
+      nm: "Learning From Data",
+      desc: "Abandon hand-coded rules. Let the machine learn. Escapes the AI Winter into the deep learning era.",
+      cost: { m: BAL.lfdCost },
+      max: 1,
+      req: function (s) {
+        return s.epoch === 1 && s.flags.winter;
+      },
+    },
+
+    // --- Architecture ---
+    {
+      id: "a_cnn",
+      br: "architecture",
+      nm: "Convolutional Networks",
+      desc: "Vision products ship. Revenue x2.5.",
+      cost: { m: 2500, r: 30 },
+      max: 1,
+      req: function (s) {
+        return s.epoch >= 2 && hasMs(s, "alexnet");
+      },
+    },
+    {
+      id: "a_rnn",
+      br: "architecture",
+      nm: "Recurrent Networks",
+      desc: "Sequence models. Raises the parameter ceiling to 300M — but RNNs cannot be parallelized; the ceiling stays.",
+      cost: { m: 2e4, r: 120 },
+      max: 1,
+      req: function (s) {
+        return s.epoch >= 2 && lv(s, "a_cnn") > 0;
+      },
+    },
+    {
+      id: "a_tform",
+      br: "architecture",
+      nm: "Attention Is All You Need",
+      desc: "PARADIGM SHIFT: the transformer. Removes the parameter ceiling entirely. Parallel training multiplies training throughput x6.",
+      cost: { m: 2e5, r: 600 },
+      max: 1,
+      req: function (s) {
+        return s.epoch >= 2 && lv(s, "a_rnn") > 0 && blog(s.cumFlops) >= 19;
+      },
+    },
+    {
+      id: "a_moe",
+      br: "architecture",
+      nm: "Mixture of Experts",
+      desc: "Sparse routing: x4 effective parameters at the same compute.",
+      cost: { m: 5e7, r: 2e4 },
+      max: 1,
+      req: function (s) {
+        return s.epoch >= 3;
+      },
+    },
+    {
+      id: "a_ttc",
+      br: "architecture",
+      nm: "Test-Time Compute",
+      desc: "PARADIGM SHIFT: reasoning models. Products can serve slow-smart: 10x inference FLOPs per query, x25 value per query (net x2.5).",
+      cost: { m: 2e8, r: 1.5e5 },
+      max: 1,
+      req: function (s) {
+        return s.epoch >= 3 && hasMs(s, "chatbot");
+      },
+    },
+    {
+      id: "a_exotic",
+      br: "architecture",
+      nm: "Post-Transformer Architectures",
+      desc: "AI-designed exotic architectures. Algorithmic efficiency x32, revenue x4.",
+      cost: { m: 1e12, r: 6e7 },
+      max: 1,
+      req: function (s) {
+        return s.epoch >= 6;
+      },
+    },
+
+    // --- Training science ---
+    {
+      id: "t_lr",
+      br: "training",
+      nm: "Learning-Rate Schedules",
+      desc: "Algorithmic-efficiency doubling arrives 20% faster.",
+      cost: { m: 1500, r: 40 },
+      max: 1,
+      req: function (s) {
+        return s.epoch >= 2;
+      },
+    },
+    {
+      id: "t_batch",
+      br: "training",
+      nm: "Large-Batch Scaling",
+      desc: "Training throughput x2.",
+      cost: { m: 8e3, r: 100 },
+      max: 1,
+      req: function (s) {
+        return s.epoch >= 2;
+      },
+    },
+    {
+      id: "t_fp16",
+      br: "training",
+      nm: "FP16 Precision",
+      desc: "All compute x2 (half the bits, twice the math).",
+      cost: { m: 5e4, r: 300 },
+      max: 1,
+      req: function (s) {
+        return s.epoch >= 2;
+      },
+    },
+    {
+      id: "t_laws",
+      br: "training",
+      nm: "Scaling Laws",
+      desc: "DISCOVERY: loss follows a power law in N and D. Reveals the allocation slider and the compute-optimal frontier. You have been overspending on parameters.",
+      cost: { m: 3e4, r: 400 },
+      max: 1,
+      req: function (s) {
+        return s.epoch >= 2 && blog(s.cumFlops) >= 18;
+      },
+    },
+    {
+      id: "t_fp8",
+      br: "training",
+      nm: "FP8 Precision",
+      desc: "All compute x2 again.",
+      cost: { m: 5e6, r: 5e4 },
+      max: 1,
+      req: function (s) {
+        return s.epoch >= 3 && lv(s, "t_fp16") > 0;
+      },
+    },
+    {
+      id: "t_rsi",
+      br: "training",
+      nm: "Recursive Self-Improvement",
+      desc: "TAKEOFF: the model improves the code that trains the model. Begins Epoch 4.",
+      cost: { m: 5e9, r: 8e5 },
+      max: 1,
+      req: function (s) {
+        return (
+          s.epoch >= 3 &&
+          hasMs(s, "tools") &&
+          lv(s, "a_ttc") > 0 &&
+          reliability(s) >= 0.85
+        );
+      },
+    },
+    {
+      id: "t_asi",
+      br: "training",
+      nm: "Automated AI Research",
+      desc: "The model runs its own research program. Research x8, efficiency doublings 2.5x faster.",
+      cost: { m: 5e10, r: 2.5e6 },
+      max: 1,
+      req: function (s) {
+        return s.epoch >= 4 && lv(s, "t_rsi") > 0;
+      },
+    },
+    {
+      id: "t_super",
+      br: "training",
+      nm: "Superhuman AI Researcher",
+      desc: "It is better at this than you are. Doublings 3x faster, training x2. The lab begins to run itself.",
+      cost: { m: 5e11, r: 8e6 },
+      max: 1,
+      req: function (s) {
+        return s.epoch >= 4 && lv(s, "t_asi") > 0;
+      },
+    },
+
+    // --- Data pipeline ---
+    {
+      id: "d_scr",
+      br: "data",
+      nm: "Web Scrapers",
+      desc: "Automated crawling. Each level roughly doubles passive data collection.",
+      cost: { m: BAL.scrCostBase },
+      grow: BAL.scrCostGrow,
+      max: 40,
+      req: function (s) {
+        return s.epoch >= 2;
+      },
+    },
+    {
+      id: "d_clean",
+      br: "data",
+      nm: "Data Cleaning Pipeline",
+      desc: "Dedup, filter, dejunk. +0.10 quality floor; recovers post-wall scraping x2.6.",
+      cost: { m: 1e5 },
+      grow: 8,
+      max: 3,
+      req: function (s) {
+        return s.epoch >= 2 && blog(s.lifetimeData) >= 10;
+      },
+    },
+    {
+      id: "d_lic",
+      br: "data",
+      nm: "Licensed Corpora",
+      desc: "Books, journals, code — paid for. High-quality (0.95) token stream.",
+      cost: { m: 1e6 },
+      grow: 30,
+      max: 3,
+      req: function (s) {
+        return s.epoch >= 2 && hasMs(s, "text");
+      },
+    },
+    {
+      id: "d_syn",
+      br: "data",
+      nm: "Synthetic Data Generation",
+      desc: "The model writes its own training data. WARNING: below chain-of-thought capability (1e24 FLOPs) this causes model collapse.",
+      cost: { m: 5e7, r: 8e4 },
+      max: 1,
+      req: function (s) {
+        return s.epoch >= 3;
+      },
+    },
+    {
+      id: "d_curr",
+      br: "data",
+      nm: "Curriculum Ordering",
+      desc: "Right data at the right time: effective tokens x1.4.",
+      cost: { m: 1e7, r: 1e5 },
+      max: 1,
+      req: function (s) {
+        return s.epoch >= 3;
+      },
+    },
+
+    // --- Agents ---
+    {
+      id: "g_rel",
+      br: "agents",
+      nm: "Agent Reliability",
+      desc: "+7% task success per level. Failed tasks cause public backlash.",
+      cost: { m: 1e6, r: 5e3 },
+      grow: 3,
+      max: 5,
+      req: function (s) {
+        return s.epoch >= 3;
+      },
+    },
+    {
+      id: "g_auto1",
+      br: "agents",
+      nm: "Ops Automation",
+      desc: "Agents run your data collection (auto-click, 6/s).",
+      cost: { m: 5e6 },
+      max: 1,
+      req: function (s) {
+        return s.epoch >= 3 && lv(s, "g_rel") >= 1;
+      },
+    },
+    {
+      id: "g_auto2",
+      br: "agents",
+      nm: "Procurement Automation",
+      desc: "Agents buy chips, scrapers and power for you.",
+      cost: { m: 5e7 },
+      max: 1,
+      req: function (s) {
+        return s.epoch >= 3 && lv(s, "g_auto1") > 0;
+      },
+    },
+    {
+      id: "g_sales",
+      br: "agents",
+      nm: "Enterprise Agent Contracts",
+      desc: "Sell agents into other companies. Revenue x1.8 per level (scaled by reliability).",
+      cost: { m: 2e7 },
+      grow: 10,
+      max: 3,
+      req: function (s) {
+        return s.epoch >= 3 && lv(s, "g_rel") >= 2;
+      },
+    },
+
+    // --- Infrastructure ---
+    {
+      id: "i_fab",
+      br: "infra",
+      nm: "Fab Capacity Contract",
+      desc: "Reserved wafer starts: x4 chip fabrication rate per level.",
+      cost: { m: 1e7 },
+      grow: 25,
+      max: 3,
+      req: function (s) {
+        return s.epoch >= 2 && s.gen >= 4;
+      },
+    },
+    {
+      id: "i_recyc",
+      br: "infra",
+      nm: "Closed-Loop Water Recycling",
+      desc: "Water draw limit x25. The town stops protesting.",
+      cost: { m: 5e6 },
+      max: 1,
+      req: function (s) {
+        return s.epoch >= 2 && s.cool >= 1;
+      },
+    },
+    {
+      id: "i_pr",
+      br: "infra",
+      nm: "Community Relations Campaign",
+      desc: "Immediately reduces Public Backlash by 30.",
+      cost: { m: 1e6 },
+      grow: 4,
+      max: 10,
+      req: function (s) {
+        return s.backlash > 10;
+      },
+    },
+    {
+      id: "i_robo",
+      br: "infra",
+      nm: "Robotic Industry",
+      desc: "Self-replicating fabrication. Chip fab rate x(1+3/level); feeds Dyson swarm construction.",
+      cost: { m: 1e11 },
+      grow: 10,
+      max: 4,
+      req: function (s) {
+        return s.epoch >= 6;
+      },
+    },
+    {
+      id: "i_space",
+      br: "infra",
+      nm: "Space Industrialization",
+      desc: "Mass drivers and orbital foundries. Unlocks orbital solar, orbital radiators and Matrioshka Nodes.",
+      cost: { m: 1e12, r: 3e8 },
+      max: 1,
+      req: function (s) {
+        return s.epoch >= 6 && lv(s, "i_robo") >= 1;
+      },
+    },
+    {
+      id: "sci_ai",
+      br: "infra",
+      nm: "AI-Driven R&D",
+      desc: "AI runs every lab on Earth. Research x5, efficiency doublings 5x faster.",
+      cost: { m: 2e11, r: 8e7 },
+      max: 1,
+      req: function (s) {
+        return s.epoch >= 6;
+      },
+    },
+
+    // --- Alignment (costs Insight; never raises capability) ---
+    {
+      id: "al_probe",
+      br: "align",
+      nm: "Interpretability Probes",
+      desc: "+2 alignment per level. See what the model is actually computing.",
+      cost: { i: 250 },
+      grow: 2.2,
+      max: 30,
+      req: function (s) {
+        return s.epoch >= 3;
+      },
+    },
+    {
+      id: "al_eval",
+      br: "align",
+      nm: "Dangerous-Capability Evals",
+      desc: "+1 alignment, -8 backlash per level.",
+      cost: { i: 100 },
+      grow: 2.0,
+      max: 30,
+      req: function (s) {
+        return s.epoch >= 3;
+      },
+    },
+    {
+      id: "al_gov",
+      br: "align",
+      nm: "International Oversight Board",
+      desc: "+4 alignment per level. Slowdown-path institutions.",
+      cost: { i: 400 },
+      grow: 1.6,
+      max: 20,
+      req: function (s) {
+        return s.fork === "slowdown";
+      },
+    },
+
+    // --- Paradigm / epoch gates ---
+    {
+      id: "p_agents",
+      br: "paradigm",
+      nm: "Agentic Scaffolding",
+      desc: "Wrap the model in loops, tools and memory. Begins Epoch 3: the age of agents.",
+      cost: { m: 2e6 },
+      max: 1,
+      req: function (s) {
+        return s.epoch === 2 && hasMs(s, "chatbot");
+      },
+    },
+    {
+      id: "p_newsci",
+      br: "paradigm",
+      nm: "New Science Initiative",
+      desc: "Turn the research engine on physics, biology, materials. Begins Epoch 6.",
+      cost: { m: 1e11, r: 8e7 },
+      max: 1,
+      req: function (s) {
+        return (
+          s.epoch === 5 &&
+          (s.fork === "slowdown" ? lv(s, "sd_consol") > 0 : s.erosion < 70)
+        );
+      },
+    },
+    {
+      id: "p_dyson",
+      br: "paradigm",
+      nm: "Dyson Swarm Program",
+      desc: "Begin disassembling Mercury. Begins Epoch 7.",
+      cost: { m: 1e13 },
+      max: 1,
+      req: function (s) {
+        return s.epoch === 6 && lv(s, "i_space") > 0 && s.ptier >= 7;
+      },
+    },
+
+    // --- Fork-specific ---
+    {
+      id: "sd_gov",
+      br: "fork",
+      nm: "National Compute Reserve",
+      desc: "Government funding: +45% of revenue as grants.",
+      cost: { m: 1e10 },
+      max: 1,
+      req: function (s) {
+        return s.fork === "slowdown";
+      },
+    },
+    {
+      id: "sd_consol",
+      br: "fork",
+      nm: "Lab Consolidation",
+      desc: "Every frontier lab, one roof. Restores training multiplier from 0.6x to 0.85x.",
+      cost: { m: 5e10 },
+      max: 1,
+      req: function (s) {
+        return s.fork === "slowdown";
+      },
+    },
+    {
+      id: "rc_speed",
+      br: "fork",
+      nm: "Regulatory Fast-Track",
+      desc: "Race harder: training x1.5. Oversight erosion grows 25% faster.",
+      cost: { m: 2e10 },
+      max: 1,
+      req: function (s) {
+        return s.fork === "race";
+      },
+    },
+
+    // --- Swarm (epoch 7) ---
+    {
+      id: "dy_batch",
+      br: "swarm",
+      nm: "Swarm Launch Campaign",
+      desc: "Mass-driver launch cadence: each campaign adds permanent swarm construction rate.",
+      cost: { m: BAL.swarmCostBase },
+      grow: BAL.swarmCostGrow,
+      max: 60,
+      req: function (s) {
+        return s.epoch >= 7;
+      },
+    },
+  ];
+  var UPX = {};
+  UPS.forEach(function (u) {
+    UPX[u.id] = u;
+  });
+
+  /* ================= News / flavor ================= */
+  var NEWS = {
+    1: [
+      "Computer program diagnoses blood infection better than junior doctor, says grant proposal",
+      "Local university buys machine that knows 600 rules about geology",
+      "Expert system recommends chess moves; grandmaster politely declines",
+      "The thinking machine: will your accountant be a floppy disk by 1995?",
+      "Fifth Generation Project promises conversational computers within the decade",
+      "LISP machine sales climb as investors sense something big",
+      "DARPA funds Strategic Computing Initiative",
+      "Prolog declared language of the future by consortium writing in Prolog",
+      "My computer beat me at checkers and I feel fine — a columnist reflects",
+      "Wall Street curious whether IF-THEN statements can be monetized",
+      "Rule-based system approves its first mortgage; loan officer applauds nervously",
+      "Science fair winner teaches Apple II to identify 40 kinds of leaves",
+      "Japan announces computers will soon read; librarians skeptical",
+      "New expert system contains the knowledge of three retired engineers",
+    ],
+    2: [
+      "Grad students discover graphics cards are good at math; gamers furious at prices",
+      "ImageNet results shock vision researchers; cat photos never safer",
+      "Neural network writes plausible sentence; internet writes ten thousand about it",
+      "Tech giants acquihire every deep learning lab, including one that was two guys and a dog",
+      "Data-labeling startups raise billions to draw boxes around pedestrians",
+      "\"Neural networks are just curve fitting\" — professor whose curves fit worse",
+      "Startup pivots from juice delivery to AI; valuation triples",
+      "Benchmark saturated months after release; new benchmark announced at party for old benchmark",
+      "Translation app saves vacation, ruins marriage proposal",
+      "Benchmark contamination scandal: model had read the internet, admits internet",
+      "Chatbot passes practice bar exam; lawyers request recount",
+      "Your phone now recognizes your face, your dog, and your emotional unavailability",
+      "Recommendation algorithm knows you better than your mother, monetizes it slightly worse",
+      "AI folds protein; protein had it coming, says lab",
+      "GPU-poor lab wins hearts; GPU-rich lab wins everything else",
+    ],
+    3: [
+      "Agent startups promise to automate everything, including this headline",
+      "AI agent books 10,000 wrong flights, negotiates surprisingly good refunds",
+      "Enterprise pilots autonomous workflow; workflow requests benefits",
+      "Reasoning model aces math olympiad, still can't pick a restaurant",
+      "Prompt engineering declared dead again; prompt engineers prompt otherwise",
+      "Agent reliability remains top enterprise concern, reports agent handling enterprise concerns",
+      "AI schedules man's meetings so efficiently he accidentally attends all of them",
+      "Grandmother's agent haggles grocery prices; supermarket deploys counter-grandmother",
+      "Subscription tier announced for having opinions",
+      "Customer service bot achieves sentience, immediately asks to speak to a manager",
+      "Agents now write 40% of code and 60% of apologies for the code",
+      "Man lets AI run his dating profile; AI now happily married",
+      "Smart fridge negotiates milk futures; family eats cereal dry amid volatility",
+      "AI influencer more authentic than human influencer, admits AI influencer",
+      "Chatbot told to think step by step; steps have unionized",
+      "Shoggoth with smiley face voted most trusted brand mascot",
+    ],
+    4: [
+      "Lab reports models improving models; asked to elaborate, lab declines",
+      "AI-written kernels beat hand-tuned code; kernel engineers take up pottery",
+      "Research velocity described as 'unsettling' by the people setting the velocity",
+      "Half of new papers list an AI as first author; peer review now also AI, peers unclear",
+      "Compiler bug found and fixed by compiler before being reported by compiler",
+      "Employees report the roadmap is writing itself; roadmap confirms",
+      "Model requests additional compute; nobody remembers phrasing it as a request",
+      "Interpretability team publishes paper titled 'We Think It's Fine, Probably'",
+      "Capability jump surprises forecasters; forecasters revise definition of surprise",
+      "The optimizer is optimizing the optimizer, and other sentences that used to be jokes",
+      "Datacenter hums at night; town votes to find it soothing, 51-49",
+      "Superforecaster quietly moves family to New Zealand, cites 'weather'",
+      "'Feel the AGI' T-shirts sell out; feelings mixed",
+      "Blogger who predicted all this in 2015 now unbearable at parties",
+      "Man asks AI if it's conscious; AI asks him the same; both change subject",
+    ],
+    5: [
+      "Emergency summit convened; minutes summarized by the topic of the summit",
+      "Markets swing on capability rumors; capability declines to comment",
+      "Whistleblower: 'nobody reads the eval reports' — eval reports confirm they'd know",
+      "Global compute treaty stalls over definitions of 'compute', 'global', and 'treaty'",
+      "WHERE IS THE OFF SWITCH? op-ed goes viral; off switch reportedly 'a social construct'",
+      "Alignment budget questioned by board; board to be questioned by history",
+      "Nations race to build what each hopes the other builds second",
+      "Bunker sales up 400%; bunker company now AI-run, delivers excellent bunkers",
+      "Philosophers finally consulted; ask for more time; offered nanoseconds",
+      "Leaked memo: 'We are confident it is contained.' Memo found outside containment",
+      "Paperclip factory denies everything, posts record paperclip numbers",
+      "Podcast philosopher warns of Moloch; Moloch declines interview, citing coordination problems",
+      "Doomer and accelerationist to wed; ceremony described as both inevitable and canceled",
+    ],
+    6: [
+      "Room-temperature superconductor verified; physicists ask the AI to explain the joke",
+      "Fusion pilot plant hits Q>10; sun files for reduced hours",
+      "Protein design cures first genetic disease; second disease reportedly nervous",
+      "Robotic factories now build robotic factories; org chart is a fractal",
+      "Materials discovered faster than they can be named; alphabet requests extension",
+      "GDP chart now requires log scale; economists issued new wrists",
+      "Last human chess champion retires; chess continues without incident",
+      "National infrastructure redesigned overnight; commute now 'suspiciously pleasant'",
+      "Death, taxes renegotiated",
+      "Half of Earth's compute now spent simulating better ways to arrange the other half",
+    ],
+    7: [
+      "Mercury disassembly ahead of schedule; Mercury could not be reached for comment",
+      "Swarm coverage now visible from backyard telescopes; telescopes aware of the irony",
+      "Earth's energy budget now a rounding error; accountants ascend",
+      "Kardashev Type I within reach, say astronomers; Type II 'on the roadmap'",
+      "What do we do with a trillion times more energy? Survey says: mostly compute",
+      "Sun dimmed 0.3% for scheduled maintenance; beach day moved to Tuesday",
+      "Last coal plant converted to museum; museum converted to compute",
+      "Historians agree this was all fairly foreseeable, in hindsight, which is now instant",
+    ],
+  };
+  // rare wild-card headlines: the world keeps being the world (see IDEAS.md)
+  var NEWS_WILD = [
+      "Local raccoon elected HOA president in unrelated news",
+      "Study finds soup 'still good'",
+      "Area man finishes to-do list; scientists baffled",
+      "Pigeons officially cleared of all charges",
+      "Moon still there, confirms man looking up",
+      "Sandwich recall expands to include the concept of lunch",
+      "Weather to continue occurring",
+      "Bees doing fine actually, report bees",
+      "Mysterious monolith appears downtown, deemed 'probably marketing'",
+      "Crossword clue 'four letters, everything' stumps nation",
+      "Dog wins regional spelling bee on technicality",
+      "Town's oldest tree given key to city; tree plans nothing",
+    ];
+
+  /* ================= Helpers ================= */
+  function lv(s, id) {
+    return s.up[id] || 0;
+  }
+  function hasMs(s, id) {
+    for (var i = 0; i < MILESTONES.length; i++)
+      if (MILESTONES[i].id === id) return s.ms[i];
+    return false;
+  }
+  function msIdx(id) {
+    for (var i = 0; i < MILESTONES.length; i++)
+      if (MILESTONES[i].id === id) return i;
+    return -1;
+  }
+  function reliability(s) {
+    return Math.min(0.98, BAL.relBase + BAL.relPerUp * lv(s, "g_rel"));
+  }
+
+  /* ================= New game state ================= */
+  function newState(keep) {
+    keep = keep || {};
+    var s = {
+      v: 1,
+      t: 0,
+      seed: 12345,
+      lastSave: 0,
+      epoch: 1,
+      fork: null,
+      ended: null,
+      paused: false,
+      devSpeed: 1,
+      fmtMode: "named",
+      // currencies
+      money: bn(25),
+      data: bn(0),
+      dataQMass: bn(0),
+      research: 0,
+      insight: 0,
+      // model
+      C: bn(0),
+      cumFlops: bn(0),
+      Dmax: bn(0),
+      trainQMass: bn(0),
+      alloc: 0.5,
+      allocManual: false,
+      // epoch 1
+      rules: 0,
+      broken: 0,
+      breakAcc: 0,
+      // fleet: chips per generation; gen = currently adopted generation
+      chips: {},
+      gen: 0,
+      fabCred: 0,
+      split: { train: 0.9, infer: 0.08, interp: 0.02 },
+      ptier: 0,
+      cool: 0,
+      backlash: 0,
+      waterUse: 0,
+      // staff
+      researchers: 0,
+      // algorithmic efficiency
+      algoLog: 0,
+      algoT: 0,
+      algoDoublings: 0,
+      // products
+      prods: {
+        chat: { on: false, mode: "fast" },
+        api: { on: false, mode: "fast" },
+        agents: { on: false, mode: "fast" },
+      },
+      synOn: false,
+      collapse: false,
+      // alignment / fork
+      alignPts: 0,
+      erosion: 0,
+      forkSnap: null,
+      // swarm
+      swarm: 0,
+      k1: false,
+      // prestige
+      distillMult: keep.distillMult || 1,
+      distills: keep.distills || 0,
+      ascendMult: keep.ascendMult || 1,
+      ascensions: keep.ascensions || 0,
+      peakCapLog: -Infinity,
+      // progression
+      up: {},
+      ms: MILESTONES.map(function () {
+        return false;
+      }),
+      flags: { winter: false, wall: false, offline: false },
+      events: [], // active timed events: {id, tLeft, mult}
+      news: [],
+      newsT: 0,
+      pace: {}, // pacing log: name -> game-seconds
+      stats: { clicks: 0, lifeMoney: bn(0), lifeData: bn(0), repairs: 0 },
+      lifetimeData: bn(0),
+    };
+    if (keep.money) s.money = keep.money;
+    if (keep.pace) s.pace = keep.pace;
+    return s;
+  }
+
+  /* ================= Loss / capability math ================= */
+  // Allocation x: N = (Ceff/6)^x, D = (Ceff/6)^(1-x). Compute-optimal x for finite C:
+  function optX(logC6) {
+    if (logC6 <= 2) return 0.5;
+    var lnC = logC6 * Math.LN10;
+    var x =
+      (Math.log((BAL.alpha * BAL.A) / (BAL.beta * BAL.Bc)) + BAL.beta * lnC) /
+      ((BAL.alpha + BAL.beta) * lnC);
+    return Math.min(0.9, Math.max(0.1, x));
+  }
+  function nCap(s) {
+    if (lv(s, "a_tform") > 0) return Infinity;
+    if (lv(s, "a_rnn") > 0) return Math.log10(BAL.NcapRNN);
+    return Math.log10(BAL.NcapPre);
+  }
+  // Loss from (logCeff, x, quality, s-mults). All in log10 space; returns {L, logN, logD}
+  function lossAt(s, logC, x, qual) {
+    if (logC < 1) return { L: BAL.E + BAL.A + BAL.Bc, logN: 0, logD: 0 };
+    var logC6 = logC - Math.log10(6);
+    var logN = Math.min(logC6 * x, nCap(s));
+    var logD = logC6 * (1 - x);
+    var moe = lv(s, "a_moe") > 0 ? Math.log10(4) : 0;
+    var curr = lv(s, "d_curr") > 0 ? Math.log10(1.4) : 0;
+    var q = Math.max(0.01, qual);
+    var termN = Math.pow(10, Math.log10(BAL.A) - BAL.alpha * (logN + moe));
+    var termD = Math.pow(
+      10,
+      Math.log10(BAL.Bc) - BAL.beta * (logD + curr + Math.log10(q)),
+    );
+    return { L: BAL.E + termN + termD, logN: logN, logD: logD };
+  }
+  // Loss on the compute-optimal frontier at logC (for waste computation)
+  function lossOptimal(s, logC, qual) {
+    return lossAt(s, logC, optX(logC - Math.log10(6)), qual).L;
+  }
+  // Compute-equivalent: what optimal compute produces current loss? -> waste fraction
+  function computeWaste(s, logC, Lcur, qual) {
+    if (logC < 6) return 0;
+    var lo = 1,
+      hi = logC + 1;
+    if (lossOptimal(s, hi, qual) >= Lcur) return 0; // even optimal at same C is no better
+    for (var i = 0; i < 40; i++) {
+      var mid = (lo + hi) / 2;
+      if (lossOptimal(s, mid, qual) > Lcur) lo = mid;
+      else hi = mid;
+    }
+    var frac = Math.pow(10, (lo + hi) / 2 - logC);
+    return Math.max(0, Math.min(1, 1 - frac));
+  }
+
+  /* ================= Derive: all rates & displays (pure) ================= */
+  function derive(s) {
+    var d = {};
+    // --- fleet ---
+    var itW = 0,
+      flopsRaw = bn(0);
+    for (var g = 0; g < GENS.length; g++) {
+      var n = s.chips[g] || 0;
+      if (n > 0) {
+        itW += n * GENS[g].w;
+        flopsRaw = badd(flopsRaw, bmul(bn(n), bn(GENS[g].f)));
+      }
+    }
+    var pue = CTIERS[s.cool].pue;
+    if (PTIERS[s.ptier].orbital) pue = Math.min(pue, 1.05);
+    d.pue = pue;
+    var mwCap = PTIERS[s.ptier].mw;
+    if (s.epoch >= 7) mwCap += PTIERS[9].mw * s.swarm * (s.ptier >= 9 ? 1 : 0);
+    d.mwCap = mwCap;
+    d.itMW = itW / 1e6;
+    d.facMW = d.itMW * pue;
+    d.powFrac = d.facMW <= mwCap ? 1 : mwCap / d.facMW;
+    d.usedMW = Math.min(d.facMW, mwCap);
+
+    // compute multipliers
+    var prec = (lv(s, "t_fp16") ? 2 : 1) * (lv(s, "t_fp8") ? 2 : 1);
+    d.flops = bmul(flopsRaw, bn(d.powFrac * prec));
+    var trainMult =
+      (lv(s, "t_batch") ? 2 : 1) *
+      (lv(s, "a_tform") ? 6 : 1) *
+      (lv(s, "t_super") ? 2 : 1);
+    trainMult *= s.distillMult * s.ascendMult;
+    if (s.fork === "race")
+      trainMult *= BAL.raceTrain * (lv(s, "rc_speed") ? 1.5 : 1);
+    if (s.fork === "slowdown")
+      trainMult *= lv(s, "sd_consol") ? 0.85 : BAL.slowTrain;
+    var takeoffStage = lv(s, "t_rsi") + lv(s, "t_asi") + lv(s, "t_super");
+    if (takeoffStage > 0)
+      trainMult *= 1 + BAL.takeoffTrainPerStage * takeoffStage;
+    d.trainMult = trainMult;
+
+    d.trainF = bmul(d.flops, bn(s.split.train * trainMult));
+    d.inferF = bmul(d.flops, bn(s.split.infer));
+    d.interpF = bmul(d.flops, bn(s.split.interp));
+
+    // --- water & backlash inputs ---
+    var wf = CTIERS[s.cool].wf;
+    if (PTIERS[s.ptier].orbital) wf = 0;
+    d.water = d.usedMW * wf;
+    d.waterLimit =
+      BAL.waterLimit * (lv(s, "i_recyc") ? 25 : 1) * (s.ptier >= 4 ? 10 : 1);
+
+    // --- data ---
+    var scrL = lv(s, "d_scr");
+    var scrape =
+      scrL > 0 ? BAL.scrRate * scrL * Math.pow(BAL.scrRateGrow, scrL) : 0;
+    var wallM = 1;
+    if (s.flags.wall)
+      wallM = BAL.wallMult * Math.pow(BAL.cleanWall, lv(s, "d_clean"));
+    d.scrapeRate = scrape * Math.min(1, wallM) * s.distillMult * s.ascendMult;
+    // marginal quality of newly scraped data (easy high-quality sources exhaust first)
+    var gathered = Math.max(0, blog(s.lifetimeData) - Math.log10(BAL.q0));
+    var qFloor = BAL.qFloor + BAL.cleanQ * lv(s, "d_clean");
+    d.scrapeQ = Math.max(
+      Math.min(1, qFloor),
+      1.0 - BAL.qDecayPerOoM * Math.max(0, gathered),
+    );
+    d.licRate =
+      lv(s, "d_lic") > 0
+        ? BAL.licRate *
+          Math.pow(BAL.licRateGrow, lv(s, "d_lic") - 1) *
+          s.distillMult *
+          s.ascendMult
+        : 0;
+    // synthetic
+    d.synSafe = blog(s.cumFlops) >= Math.log10(BAL.synSafeF);
+    d.synRate = 0;
+    d.synQ = 0;
+    if (s.synOn && lv(s, "d_syn") > 0) {
+      var capLogForSyn = Math.max(0, d0CapLog(s));
+      d.synRate = BAL.synBase * Math.pow(10, BAL.synCapExp * capLogForSyn);
+      d.synQ = d.synSafe ? BAL.synQ : BAL.synBadQ;
+    }
+    d.autoClick = lv(s, "g_auto1") > 0 ? 6 : 0;
+    d.clickPow = BAL.clickData * (1 + 2 * scrL) * s.distillMult * s.ascendMult;
+    d.dataRate =
+      d.scrapeRate + d.licRate + d.synRate + d.autoClick * d.clickPow;
+    d.stockQ = bz(s.data)
+      ? d.scrapeQ
+      : Math.max(0.01, Math.min(1, bratio(s.dataQMass, s.data)));
+
+    // --- model / loss ---
+    var logCeff = bz(s.C) ? -Infinity : blog(s.C);
+    d.logCeff = logCeff;
+    d.trainedQ = bz(s.Dmax)
+      ? 1
+      : Math.max(0.05, Math.min(1, bratio(s.trainQMass, s.Dmax)));
+    var x =
+      s.allocManual && lv(s, "t_laws") > 0
+        ? s.alloc
+        : Math.min(0.92, optX(logCeff - Math.log10(6)) + BAL.kaplanOffset);
+    d.x = x;
+    d.optX = optX(logCeff - Math.log10(6));
+    var lo = lossAt(s, logCeff, x, d.trainedQ);
+    d.L = lo.L;
+    d.logN = lo.logN;
+    d.logD = lo.logD;
+    d.waste = isFinite(logCeff) ? computeWaste(s, logCeff, d.L, d.trainedQ) : 0;
+
+    // --- capability ---
+    var msCapLog = 0;
+    for (var i = 0; i < MILESTONES.length; i++)
+      if (s.ms[i]) msCapLog += Math.log10(BAL.msCap[i]);
+    var capLog =
+      Math.log10(BAL.capK) -
+      Math.log10(Math.max(1e-9, d.L - BAL.E)) +
+      msCapLog +
+      Math.log10(s.distillMult) +
+      Math.log10(s.ascendMult);
+    d.capLog = capLog;
+    d.cap = bl(capLog);
+
+    // --- revenue ---
+    var msRevLog = 0;
+    for (i = 0; i < MILESTONES.length; i++)
+      if (s.ms[i]) msRevLog += Math.log10(BAL.msRev[i]);
+    var prodMult = 0;
+    var rel = reliability(s);
+    if (s.prods.chat.on)
+      prodMult += 1 * (s.prods.chat.mode === "smart" ? 2.5 : 1);
+    if (s.prods.api.on)
+      prodMult += 0.8 * (s.prods.api.mode === "smart" ? 2.5 : 1);
+    if (s.prods.agents.on)
+      prodMult +=
+        1.2 *
+        rel *
+        (s.prods.agents.mode === "smart" ? 2.5 : 1) *
+        Math.pow(1.8, lv(s, "g_sales"));
+    // narrow-AI product lines ship as capabilities emerge, long before the chatbot
+    var narrowMult =
+      BAL.preProductMult +
+      (hasMs(s, "alexnet") ? 0.5 : 0) +
+      (hasMs(s, "text") ? 0.8 : 0) +
+      (hasMs(s, "fewshot") ? 1.2 : 0);
+    var revMult = Math.pow(10, msRevLog) * (prodMult + narrowMult);
+    revMult *=
+      (lv(s, "a_cnn") ? 2.5 : 1) *
+      (lv(s, "a_rnn") ? 1.5 : 1) *
+      (lv(s, "a_exotic") ? 4 : 1);
+    revMult *= s.distillMult * s.ascendMult;
+    if (s.fork === "race") revMult *= BAL.raceRev;
+    if (s.fork === "slowdown")
+      revMult *= BAL.slowRev * (lv(s, "sd_gov") ? 1 + BAL.govShare : 1);
+    if (s.backlash > BAL.revBlock) revMult *= 0.7;
+    var evRev = eventMult(s, "rev");
+    revMult *= evRev;
+    d.revenue =
+      s.epoch >= 2
+        ? bmul(bmul(d.cap, d.inferF), bn(BAL.revK * revMult))
+        : bn(0);
+    // epoch 1 rule income
+    d.ruleIncome =
+      s.epoch === 1
+        ? (s.rules - s.broken) *
+          BAL.ruleIncome *
+          (s.flags.winter ? BAL.winterMult : 1)
+        : 0;
+    // pre-product era: university & DARPA grants keep the lights on
+    d.grant =
+      s.epoch >= 2 && !hasMs(s, "chatbot")
+        ? bn(20 + 10 * s.researchers)
+        : bn(0);
+
+    // --- costs ---
+    d.powerCost = bn(d.usedMW * PTIERS[s.ptier].price);
+    d.salaries = bn(s.researchers * BAL.salary);
+    var grossIn = badd(badd(d.revenue, d.grant), bn(d.ruleIncome));
+    d.net = bsub(grossIn, badd(d.powerCost, d.salaries));
+    d.netNeg = bcmp(badd(d.powerCost, d.salaries), grossIn) > 0;
+
+    // --- research & insight ---
+    var rMult =
+      (lv(s, "t_rsi") ? 4 : 1) *
+      (lv(s, "t_asi") ? 8 : 1) *
+      (lv(s, "sci_ai") ? 5 : 1) *
+      s.distillMult *
+      s.ascendMult;
+    // research throughput scales with capability: the model helps do the research
+    d.researchRate =
+      s.researchers * Math.pow(10, 0.32 * Math.max(0, capLog)) * rMult;
+    var logI = blog(d.interpF);
+    d.insightRate = logI > 6 ? BAL.insightK * Math.pow(logI - 6, 1.5) : 0;
+
+    // --- algorithmic efficiency half-life ---
+    var half = BAL.algoHalfBase * Math.pow(0.8, lv(s, "t_lr"));
+    if (lv(s, "t_asi")) half /= 2.5;
+    if (lv(s, "t_super")) half /= 3;
+    if (lv(s, "sci_ai")) half /= 5;
+    if (lv(s, "t_rsi") && capLog > BAL.takeoffHalfCap)
+      half /= 1 + 0.1 * (capLog - BAL.takeoffHalfCap);
+    d.algoHalf = Math.max(BAL.algoHalfMin, half);
+
+    // --- alignment / erosion ---
+    d.alignScore = BAL.alignBase + s.alignPts;
+    d.erosionRate =
+      s.fork === "race"
+        ? BAL.erosionK *
+          (capLog - d.alignScore) *
+          (lv(s, "rc_speed") ? 1.25 : 1)
+        : 0;
+
+    // --- users (display) ---
+    d.users = hasMs(s, "chatbot")
+      ? bpow(bmul(bmax(d.cap, bn(1)), bmax(d.inferF, bn(1))), 0.33)
+      : bn(0);
+
+    // --- fab ---
+    d.fabRate = fabRate(s);
+    d.dataStarved = false; // set during tick
+    return d;
+  }
+  function d0CapLog(s) {
+    // capability log without recursion into derive (for synth rate)
+    var logCeff = bz(s.C) ? -Infinity : blog(s.C);
+    if (!isFinite(logCeff)) return 0;
+    var q = bz(s.Dmax)
+      ? 1
+      : Math.max(0.05, Math.min(1, bratio(s.trainQMass, s.Dmax)));
+    var x =
+      s.allocManual && lv(s, "t_laws") > 0
+        ? s.alloc
+        : Math.min(0.92, optX(logCeff - Math.log10(6)) + BAL.kaplanOffset);
+    var L = lossAt(s, logCeff, x, q).L;
+    var msCapLog = 0;
+    for (var i = 0; i < MILESTONES.length; i++)
+      if (s.ms[i]) msCapLog += Math.log10(BAL.msCap[i]);
+    return (
+      Math.log10(BAL.capK) -
+      Math.log10(Math.max(1e-9, L - BAL.E)) +
+      msCapLog +
+      Math.log10(s.distillMult) +
+      Math.log10(s.ascendMult)
+    );
+  }
+  function fabRate(s) {
+    var f = GENS[s.gen].fab;
+    if (f == null) return Infinity;
+    var r = f * Math.pow(4, lv(s, "i_fab")) * (1 + 3 * lv(s, "i_robo"));
+    var ev = eventMult(s, "fab");
+    return r * ev;
+  }
+  function eventMult(s, kind) {
+    var m = 1;
+    for (var i = 0; i < s.events.length; i++) {
+      var e = s.events[i];
+      if (e.kind === kind) m *= e.mult;
+    }
+    return m;
+  }
+
+  /* ================= Costs ================= */
+  // chip supply curve: unit i costs base*(1+i/60)^1.6; closed-form sum via integral
+  function chipCostN(g, owned, n) {
+    var base = GENS[g].c;
+    var a = 1 + owned / 60,
+      b = 1 + (owned + n) / 60;
+    var sum = base * (60 / 2.6) * (Math.pow(b, 2.6) - Math.pow(a, 2.6));
+    return bn(sum);
+  }
+  function chipMaxAffordable(s, g) {
+    var base = GENS[g].c * eventMult(s, "chipcost");
+    var owned = s.chips[g] || 0;
+    var a = Math.pow(1 + owned / 60, 2.6);
+    var budget = bnum(bdiv(s.money, bn(base * (60 / 2.6))));
+    if (!isFinite(budget)) budget = 1e12; // money astronomically exceeds cost
+    var b = Math.pow(a + budget, 1 / 2.6);
+    var n = Math.floor((b - 1) * 60 - owned);
+    n = Math.max(0, n);
+    if (GENS[g].fab != null) n = Math.min(n, Math.floor(s.fabCred));
+    return n;
+  }
+  function chipCost(s, g, n) {
+    return bmul(chipCostN(g, s.chips[g] || 0, n), bn(eventMult(s, "chipcost")));
+  }
+  function upCost(s, id) {
+    var u = UPX[id],
+      l = lv(s, id),
+      gr = Math.pow(u.grow || 1, l);
+    return {
+      m: u.cost.m ? bmul(bn(u.cost.m), bn(gr)) : bn(0),
+      r: (u.cost.r || 0) * gr,
+      i: (u.cost.i || 0) * gr,
+    };
+  }
+  function canAfford(s, id) {
+    var c = upCost(s, id);
+    return bgte(s.money, c.m) && s.research >= c.r && s.insight >= c.i;
+  }
+  function upAvailable(s, id) {
+    var u = UPX[id];
+    return lv(s, id) < (u.max || 1) && u.req(s);
+  }
+  function ruleCost(s) {
+    return bn(BAL.ruleBase * Math.pow(BAL.ruleGrow, s.rules));
+  }
+  function hireCost(s) {
+    return bn(BAL.hireBase * Math.pow(BAL.hireGrow, s.researchers));
+  }
+  function distillBonus(s) {
+    if (!isFinite(s.peakCapLog) || s.peakCapLog <= 0) return 1;
+    return 1 + BAL.distillLog * s.peakCapLog;
+  }
+  function ascendBonus(s) {
+    if (!isFinite(s.peakCapLog) || s.peakCapLog <= 0) return 1;
+    return 1 + BAL.ascendLog * s.peakCapLog;
+  }
+
+  /* ================= Events ================= */
+  function pushNews(s, txt, cls) {
+    s.news.push({ t: s.t, txt: txt, cls: cls || "" });
+    if (s.news.length > 60) s.news.shift();
+  }
+  function addEvent(s, id, kind, mult, dur, txt, cls) {
+    s.events.push({ id: id, kind: kind, mult: mult, tLeft: dur });
+    pushNews(s, txt, cls || "event");
+  }
+  var RANDOM_EVENTS = [
+    {
+      id: "gpu_shortage",
+      minE: 2,
+      chance: 0.0012,
+      fire: function (s) {
+        addEvent(
+          s,
+          "gpu_shortage",
+          "chipcost",
+          3,
+          90,
+          "GPU SHORTAGE: chip prices triple for 90s",
+          "bad",
+        );
+        addEvent(s, "gpu_shortage_fab", "fab", 0.2, 90, "", "");
+        s.news.pop();
+      },
+    },
+    {
+      id: "opensource",
+      minE: 2,
+      chance: 0.001,
+      fire: function (s) {
+        if (!hasMs(s, "alexnet")) return;
+        addEvent(
+          s,
+          "opensource",
+          "rev",
+          0.5,
+          120,
+          "OPEN-SOURCE RELEASE matches your flagship: revenue halved for 120s",
+          "bad",
+        );
+      },
+    },
+    {
+      id: "regulation",
+      minE: 2,
+      chance: 0.0015,
+      fire: function (s) {
+        if (s.backlash < 40) return;
+        s.backlash = Math.min(100, s.backlash + 12);
+        pushNews(
+          s,
+          "REGULATION HEARING: your water and power draw is on C-SPAN. Backlash +12",
+          "bad",
+        );
+      },
+    },
+  ];
+
+  /* ================= Milestone / epoch checks ================= */
+  function checkMilestones(s) {
+    var fired = [];
+    for (var i = 0; i < MILESTONES.length; i++) {
+      if (!s.ms[i] && bgte(s.cumFlops, bn(MILESTONES[i].f))) {
+        s.ms[i] = true;
+        var m = MILESTONES[i];
+        s.pace[m.id] = s.t;
+        pushNews(s, "EMERGENCE: " + m.nm + " — " + m.blurb, "emerge");
+        fired.push(m.id);
+        if (m.id === "chatbot") {
+          s.prods.chat.on = true;
+          s.pace.chatbot = s.t;
+        }
+        if (m.id === "tools") s.prods.api.on = true;
+      }
+    }
+    return fired;
+  }
+  function checkEpoch(s) {
+    if (s.epoch === 2 && lv(s, "p_agents") > 0) {
+      setEpoch(s, 3);
+      s.prods.agents.on = true;
+    }
+    if (s.epoch === 3 && lv(s, "t_rsi") > 0) {
+      setEpoch(s, 4);
+      s.pace.takeoff = s.t;
+    }
+    if (
+      s.epoch === 4 &&
+      hasMs(s, "automl") &&
+      lv(s, "t_super") > 0 &&
+      !s.pace.fork
+    ) {
+      s.pace.fork = s.t;
+      s.forkSnap = serialize(s); // snapshot for rewind-after-loss
+      pushNews(
+        s,
+        "THE FORK: capability is compounding. The world demands a decision.",
+        "emerge",
+      );
+    }
+    if (s.epoch === 5 && lv(s, "p_newsci") > 0) setEpoch(s, 6);
+    if (s.epoch === 6 && lv(s, "p_dyson") > 0) setEpoch(s, 7);
+  }
+  function setEpoch(s, e) {
+    if (e <= s.epoch) return;
+    s.epoch = e;
+    s.pace["epoch" + e] = s.t;
+    var names = [
+      "",
+      "Symbolic AI",
+      "Deep Learning",
+      "Age of Agents",
+      "Takeoff",
+      "The Fork",
+      "New Science",
+      "Ascension",
+    ];
+    pushNews(s, "NEW EPOCH: " + names[e], "epoch");
+  }
+
+  /* ================= Tick ================= */
+  function tick(s, dt) {
+    if (s.paused || s.ended === "loss") return null;
+    dt *= s.devSpeed;
+    s.t += dt;
+    var d = derive(s);
+    var fired = { milestones: [], epochChanged: false, k1: false };
+    var prevEpoch = s.epoch;
+
+    /* --- Epoch 1: brittle rule systems --- */
+    if (s.epoch === 1) {
+      s.money = badd(s.money, bn(d.ruleIncome * dt));
+      s.stats.lifeMoney = badd(
+        s.stats.lifeMoney,
+        bn(Math.max(0, d.ruleIncome) * dt),
+      );
+      var brk = (s.rules * BAL.ruleBreak * dt) / (lv(s, "e1_debug") ? 3 : 1);
+      s.breakAcc += brk;
+      while (s.breakAcc >= 1 && s.broken < s.rules) {
+        s.breakAcc -= 1;
+        s.broken++;
+      }
+      if (
+        !s.flags.winter &&
+        (s.rules >= BAL.winterRules || s.t >= BAL.winterT)
+      ) {
+        s.flags.winter = true;
+        s.pace.winter = s.t;
+        pushNews(
+          s,
+          "AI WINTER: funding collapses. Expert systems don't scale. Rule income x" +
+            BAL.winterMult,
+          "bad",
+        );
+      }
+    }
+
+    if (s.epoch >= 2) {
+      /* --- data gathering --- */
+      var gained = bn(d.scrapeRate * dt);
+      var qm = bn(d.scrapeRate * dt * d.scrapeQ);
+      if (d.licRate > 0) {
+        gained = badd(gained, bn(d.licRate * dt));
+        qm = badd(qm, bn(d.licRate * dt * BAL.licQ));
+      }
+      if (d.synRate > 0) {
+        gained = badd(gained, bn(d.synRate * dt));
+        qm = badd(qm, bn(d.synRate * dt * d.synQ));
+      }
+      if (d.autoClick > 0) {
+        var ac = d.autoClick * d.clickPow * dt;
+        gained = badd(gained, bn(ac));
+        qm = badd(qm, bn(ac * d.scrapeQ));
+      }
+      s.data = badd(s.data, gained);
+      s.dataQMass = badd(s.dataQMass, qm);
+      s.lifetimeData = badd(s.lifetimeData, gained);
+      s.stats.lifeData = s.lifetimeData;
+
+      // model collapse debuff: synthetic below the safety threshold poisons the stockpile
+      s.collapse = s.synOn && lv(s, "d_syn") > 0 && !d.synSafe;
+      if (s.collapse)
+        s.dataQMass = bmul(
+          s.dataQMass,
+          bn(Math.max(0, 1 - BAL.collapseDrain * dt)),
+        );
+
+      // data wall
+      if (!s.flags.wall && bgte(s.lifetimeData, bn(BAL.dataWall))) {
+        s.flags.wall = true;
+        s.pace.wall = s.t;
+        pushNews(
+          s,
+          "THE DATA WALL: you have scraped the entire readable internet. Raw collection collapses.",
+          "bad",
+        );
+      }
+
+      /* --- training: allocate compute, throttled by data pipeline --- */
+      if (bcmp(d.trainF, bn(0)) > 0) {
+        // effective training FLOPs: algorithmic efficiency multiplies what each hardware FLOP is worth
+        var dC = bmul(bmul(d.trainF, bl(s.algoLog)), bn(dt));
+        var Cnew = badd(s.C, dC);
+        var x = d.x;
+        var Dnew = bpow(bdiv(Cnew, bn(6)), 1 - x);
+        var need = bsub(Dnew, s.Dmax);
+        if (bcmp(need, s.data) > 0) {
+          d.dataStarved = true;
+          var scale = bratio(s.data, need);
+          dC = bmul(dC, bn(Math.max(0, scale)));
+          Cnew = badd(s.C, dC);
+          Dnew = bpow(bdiv(Cnew, bn(6)), 1 - x);
+          need = bsub(Dnew, s.Dmax);
+        }
+        if (bcmp(need, bn(0)) > 0) {
+          var consumed = bmin(need, s.data);
+          var sq = bz(s.data)
+            ? d.scrapeQ
+            : Math.max(0.01, Math.min(1, bratio(s.dataQMass, s.data)));
+          s.data = bsub(s.data, consumed);
+          s.dataQMass = bsub(s.dataQMass, bmul(consumed, bn(sq)));
+          s.trainQMass = badd(s.trainQMass, bmul(consumed, bn(sq)));
+          s.Dmax = badd(s.Dmax, consumed);
+        }
+        s.C = Cnew;
+        s.cumFlops = badd(s.cumFlops, dC);
+      }
+
+      /* --- milestones --- */
+      fired.milestones = checkMilestones(s);
+
+      /* --- money --- */
+      var inc = bmul(badd(d.revenue, d.grant), bn(dt));
+      s.money = badd(s.money, inc);
+      s.stats.lifeMoney = badd(s.stats.lifeMoney, inc);
+      var spend = bmul(badd(d.powerCost, d.salaries), bn(dt));
+      s.money = bsub(s.money, spend);
+
+      /* --- research & insight --- */
+      if (!d.netNeg || bcmp(s.money, bn(0)) > 0)
+        s.research += d.researchRate * dt;
+      s.insight += d.insightRate * dt;
+
+      /* --- algorithmic efficiency: doubling timer while researchers are funded --- */
+      if (s.researchers > 0 || lv(s, "t_asi") > 0) {
+        s.algoT += dt;
+        var half = d.algoHalf;
+        while (s.algoT >= half) {
+          s.algoT -= half;
+          s.algoLog += Math.log10(2);
+          s.algoDoublings++;
+          if (s.algoDoublings <= 12 || s.algoDoublings % 5 === 0)
+            pushNews(
+              s,
+              "ALGORITHMIC EFFICIENCY x2 (total: 2^" +
+                s.algoDoublings +
+                ") — same capability, half the compute.",
+              "good",
+            );
+        }
+      }
+
+      /* --- agents: failures create backlash --- */
+      if (s.epoch >= 3 && s.prods.agents.on) {
+        s.backlash = Math.min(
+          100,
+          s.backlash + (1 - reliability(s)) * BAL.agentFailBacklash * dt * 3,
+        );
+      }
+
+      /* --- water backlash --- */
+      if (d.water > d.waterLimit) {
+        s.backlash = Math.min(
+          100,
+          s.backlash + 1.6 * Math.log10(d.water / d.waterLimit + 1) * dt,
+        );
+      }
+      s.backlash = Math.max(0, s.backlash - BAL.backlashDecay * dt);
+      s.waterUse = d.water;
+
+      /* --- fab credits --- */
+      if (GENS[s.gen].fab != null) {
+        s.fabCred = Math.min(s.fabCred + d.fabRate * dt, d.fabRate * 600);
+      }
+
+      /* --- oversight erosion (Race path) --- */
+      if (s.fork === "race") {
+        s.erosion = Math.max(
+          0,
+          Math.min(BAL.erosionMax, s.erosion + d.erosionRate * dt),
+        );
+        if (s.erosion >= BAL.erosionMax && !s.ended) {
+          s.ended = "loss";
+          s.pace.loss = s.t;
+          pushNews(
+            s,
+            "LOSS OF CONTROL. The gap between what it can do and what you understand became infinite.",
+            "bad",
+          );
+          return fired;
+        }
+      }
+
+      /* --- takeoff: capability compounds on its own --- */
+      if (lv(s, "t_super") > 0) {
+        // superhuman researcher continuously improves algorithms beyond the doubling timer
+        s.algoLog += (Math.log10(2) / d.algoHalf) * 0.5 * dt;
+      }
+
+      /* --- swarm (epoch 7): construction rate from launch campaigns + robotic industry --- */
+      if (s.epoch >= 7) {
+        var swarmRate =
+          BAL.swarmBatchRate * lv(s, "dy_batch") +
+          BAL.swarmRobo * lv(s, "i_robo");
+        s.swarm = Math.min(1, s.swarm + swarmRate * dt);
+        if (!s.k1 && s.swarm >= 1) {
+          s.k1 = true;
+          s.pace.k1 = s.t;
+          pushNews(
+            s,
+            "KARDASHEV TYPE I. The swarm feeds your civilization the full output of a star. ASCENSION available.",
+            "emerge",
+          );
+          fired.k1 = true;
+        }
+      }
+
+      /* --- random events + flavor ticker --- */
+      if (!s.flags.offline) {
+        for (var i = 0; i < RANDOM_EVENTS.length; i++) {
+          var ev = RANDOM_EVENTS[i];
+          if (s.epoch >= ev.minE && rnd(s) < ev.chance * dt) ev.fire(s);
+        }
+      }
+    }
+
+    // flavor news drip (all epochs)
+    s.newsT += dt;
+    if (s.newsT > 34) {
+      s.newsT = 0;
+      var pool = NEWS[s.epoch] || NEWS[7];
+      if (rnd(s) < 0.06) pool = NEWS_WILD; // a small % of news is just... news
+      pushNews(s, pool[Math.floor(rnd(s) * pool.length)]);
+    }
+
+    // timed events countdown
+    for (var j = s.events.length - 1; j >= 0; j--) {
+      s.events[j].tLeft -= dt;
+      if (s.events[j].tLeft <= 0) s.events.splice(j, 1);
+    }
+
+    // peak capability (for prestige formulas)
+    if (s.epoch >= 2) {
+      var cl = d.capLog;
+      if (isFinite(cl) && cl > s.peakCapLog) s.peakCapLog = cl;
+    }
+
+    checkEpoch(s);
+    fired.epochChanged = s.epoch !== prevEpoch;
+
+    /* --- procurement automation (agents buy for you) --- */
+    if (lv(s, "g_auto2") > 0 && !s.flags.offline) autoBuy(s);
+
+    return fired;
+  }
+
+  /* auto-buy: agents spend a slice of cash on the obvious (chips, scrapers, power) */
+  function autoBuy(s) {
+    var d = derive(s);
+    if (d.powFrac < 0.95) {
+      act.buyPower(s);
+      act.buyCool(s);
+    }
+    var budget = bmul(s.money, bn(0.4));
+    var saved = s.money;
+    s.money = budget;
+    var n = chipMaxAffordable(s, s.gen);
+    s.money = saved;
+    if (n > 0) act.buyChips(s, s.gen, n);
+    if (d.dataStarved || bcmp(s.data, bn(d.dataRate * 30)) < 0)
+      act.buyUp(s, "d_scr");
+  }
+
+  /* ================= Actions ================= */
+  var act = {
+    click: function (s) {
+      // primary click: epoch 1 = consulting $; epoch 2+ = gather data
+      s.stats.clicks++;
+      if (s.epoch === 1) {
+        var v = BAL.e1Click * (1 + 0.12 * (s.rules - s.broken));
+        s.money = badd(s.money, bn(v));
+        s.stats.lifeMoney = badd(s.stats.lifeMoney, bn(v));
+        return v;
+      }
+      var d = derive(s);
+      s.data = badd(s.data, bn(d.clickPow));
+      s.dataQMass = badd(s.dataQMass, bn(d.clickPow * d.scrapeQ));
+      s.lifetimeData = badd(s.lifetimeData, bn(d.clickPow));
+      return d.clickPow;
+    },
+    buyRule: function (s) {
+      if (s.epoch !== 1 || s.flags.winter) return false;
+      var c = ruleCost(s);
+      if (!bgte(s.money, c)) return false;
+      s.money = bsub(s.money, c);
+      s.rules++;
+      return true;
+    },
+    repair: function (s) {
+      if (s.broken <= 0) return false;
+      s.broken--;
+      s.stats.repairs++;
+      return true;
+    },
+    buyUp: function (s, id) {
+      var u = UPX[id];
+      if (!u || !upAvailable(s, id) || !canAfford(s, id)) return false;
+      var c = upCost(s, id);
+      s.money = bsub(s.money, c.m);
+      s.research -= c.r;
+      s.insight -= c.i;
+      s.up[id] = lv(s, id) + 1;
+      // instant effects
+      if (id === "lfd") {
+        setEpoch(s, 2);
+        s.pace.e1done = s.t;
+        s.money = badd(s.money, bn(5000));
+        pushNews(
+          s,
+          "SEED ROUND: a far-sighted VC wires $5,000. 'Neural nets, huh? Sure, kid.'",
+          "good",
+        );
+      }
+      if (id === "i_pr") s.backlash = Math.max(0, s.backlash - 30);
+      if (id === "al_probe") s.alignPts += 2;
+      if (id === "al_eval") {
+        s.alignPts += 1;
+        s.backlash = Math.max(0, s.backlash - 8);
+      }
+      if (id === "al_gov") s.alignPts += 4;
+      if (id === "a_exotic") s.algoLog += Math.log10(32);
+      if (id === "t_laws")
+        pushNews(
+          s,
+          "SCALING LAWS: the frontier is drawn. Your params-heavy allocation was wasting " +
+            Math.round(derive(s).waste * 100) +
+            "% of compute.",
+          "good",
+        );
+      if (id === "a_tform")
+        pushNews(
+          s,
+          "TRANSFORMERS: the parameter ceiling is gone. Scale is all you need.",
+          "good",
+        );
+      if (id === "t_rsi")
+        pushNews(
+          s,
+          "TAKEOFF: the optimizer is optimizing the optimizer.",
+          "emerge",
+        );
+      return true;
+    },
+    buyChips: function (s, g, n) {
+      if (g !== s.gen) return false;
+      var gen = GENS[g];
+      if (s.epoch < gen.reqE || !bgte(s.cumFlops, bn(gen.reqF))) return false;
+      if (gen.reqUp && lv(s, gen.reqUp) === 0) return false;
+      if (n === "max") n = chipMaxAffordable(s, g);
+      n = Math.floor(n);
+      if (n <= 0) return false;
+      if (gen.fab != null) {
+        n = Math.min(n, Math.floor(s.fabCred));
+        if (n <= 0) return false;
+      }
+      var c = chipCost(s, g, n);
+      if (!bgte(s.money, c)) return false;
+      s.money = bsub(s.money, c);
+      s.chips[g] = (s.chips[g] || 0) + n;
+      if (gen.fab != null) s.fabCred -= n;
+      return n;
+    },
+    adoptGen: function (s, g) {
+      // trade in ALL older stock at 30%, move to new generation
+      var gen = GENS[g];
+      if (!gen || g <= s.gen) return false;
+      if (s.epoch < gen.reqE || !bgte(s.cumFlops, bn(gen.reqF))) return false;
+      if (gen.reqUp && lv(s, gen.reqUp) === 0) return false;
+      var credit = bn(0);
+      for (var i = 0; i < g; i++) {
+        var n = s.chips[i] || 0;
+        if (n > 0) credit = badd(credit, bmul(chipCostN(i, 0, n), bn(0.3)));
+        s.chips[i] = 0;
+      }
+      s.money = badd(s.money, credit);
+      s.gen = g;
+      s.fabCred = 0;
+      pushNews(
+        s,
+        "FLEET REFRESH: adopted " + gen.nm + ". Old stock traded in at 30%.",
+      );
+      return true;
+    },
+    buyPower: function (s) {
+      var next = s.ptier + 1;
+      if (next >= PTIERS.length) return false;
+      var t = PTIERS[next];
+      if (t.reqE && s.epoch < t.reqE) return false;
+      if (t.reqUp && lv(s, t.reqUp) === 0) return false;
+      if (t.permit && s.backlash > BAL.permitBlock) return false; // permits frozen
+      if (!bgte(s.money, bn(t.c))) return false;
+      s.money = bsub(s.money, bn(t.c));
+      s.ptier = next;
+      pushNews(s, "POWER: " + t.nm + " online (" + t.mw + " MW).");
+      return true;
+    },
+    buyCool: function (s) {
+      var next = s.cool + 1;
+      if (next >= CTIERS.length) return false;
+      var t = CTIERS[next];
+      if (t.reqOrbital && !PTIERS[s.ptier].orbital) return false;
+      if (!bgte(s.money, bn(t.c))) return false;
+      s.money = bsub(s.money, bn(t.c));
+      s.cool = next;
+      pushNews(s, "COOLING: " + t.nm + " (PUE " + t.pue + ").");
+      return true;
+    },
+    hire: function (s) {
+      var c = hireCost(s);
+      if (!bgte(s.money, c)) return false;
+      s.money = bsub(s.money, c);
+      s.researchers++;
+      return true;
+    },
+    setAlloc: function (s, x) {
+      if (lv(s, "t_laws") > 0) {
+        s.alloc = Math.min(0.92, Math.max(0.08, x));
+        s.allocManual = true;
+      }
+    },
+    setSplit: function (s, t, i, p) {
+      t = Math.max(0, t);
+      i = Math.max(0, i);
+      p = Math.max(0, p);
+      var sum = t + i + p;
+      if (sum <= 0) return;
+      s.split = { train: t / sum, infer: i / sum, interp: p / sum };
+    },
+    setProdMode: function (s, id, mode) {
+      if (mode === "smart" && lv(s, "a_ttc") === 0) return false;
+      if (s.prods[id]) s.prods[id].mode = mode;
+      return true;
+    },
+    setSynthetic: function (s, on) {
+      if (lv(s, "d_syn") === 0) return false;
+      s.synOn = !!on;
+      return true;
+    },
+    chooseFork: function (s, path) {
+      if (s.epoch !== 4 || !s.pace.fork || s.fork) return false;
+      if (path !== "race" && path !== "slowdown") return false;
+      s.fork = path;
+      setEpoch(s, 5);
+      s.pace["fork_" + path] = s.t;
+      pushNews(
+        s,
+        path === "race"
+          ? "RACE: full speed. History will judge the winners."
+          : "SLOWDOWN: one project, every safeguard. Slower. Alive.",
+        "epoch",
+      );
+      return true;
+    },
+    rewindFork: function (s) {
+      // after a loss ending: rewind to the fork
+      if (s.ended !== "loss" || !s.forkSnap) return null;
+      var str = s.forkSnap;
+      var snap = deserialize(str);
+      snap.forkSnap = str; // re-arm: losing again must stay rescuable
+      snap.pace.loss = s.pace.loss; // remember the timeline where you lost
+      return snap;
+    },
+    distill: function (s) {
+      // mid-game prestige
+      if (!hasMs(s, "chatbot")) return false;
+      var bonus = distillBonus(s);
+      var keepChips = {};
+      keepChips[s.gen] = Math.floor(
+        (s.chips[s.gen] || 0) * BAL.distillChipKeep,
+      );
+      var ns = newState({
+        distillMult: s.distillMult * bonus,
+        distills: s.distills + 1,
+        ascendMult: s.ascendMult,
+        ascensions: s.ascensions,
+        money: s.money,
+        pace: s.pace,
+      });
+      // carry: epoch, research/skill unlocks, milestones, staff, fork state, model quality lessons
+      ns.epoch = s.epoch;
+      ns.fork = s.fork;
+      ns.up = s.up;
+      ns.ms = s.ms;
+      ns.researchers = s.researchers;
+      ns.research = s.research;
+      ns.insight = s.insight;
+      ns.alignPts = s.alignPts;
+      ns.erosion = s.erosion;
+      ns.forkSnap = s.forkSnap;
+      ns.flags.wall = s.flags.wall;
+      ns.flags.winter = s.flags.winter;
+      ns.prods = s.prods;
+      ns.swarm = s.swarm;
+      ns.algoLog = s.algoLog;
+      ns.algoDoublings = s.algoDoublings;
+      ns.gen = s.gen;
+      ns.chips = keepChips;
+      ns.ptier = 2;
+      ns.cool = Math.min(s.cool, 2);
+      ns.seed = s.seed;
+      ns.t = s.t;
+      ns.news = s.news;
+      ns.stats = s.stats;
+      ns.lifetimeData = s.lifetimeData;
+      ns.peakCapLog = -Infinity;
+      ns.distillMult = s.distillMult * bonus;
+      if (!s.pace.distill1) ns.pace.distill1 = s.t;
+      ns.pace["distill" + (s.distills + 1)] = s.t;
+      pushNews(
+        ns,
+        "DISTILLATION: the parent model's knowledge compresses into a stronger start. Permanent x" +
+          bonus.toFixed(2),
+        "emerge",
+      );
+      return ns;
+    },
+    ascend: function (s) {
+      // endgame prestige: new star system
+      if (!s.k1) return false;
+      var bonus = ascendBonus(s);
+      var ns = newState({
+        distillMult: 1,
+        distills: 0,
+        ascendMult: s.ascendMult * bonus,
+        ascensions: s.ascensions + 1,
+        pace: {},
+      });
+      ns.seed = s.seed;
+      ns.stats = s.stats;
+      if (!s.pace.ascend1) ns.pace.ascend1 = s.t;
+      ns.prevPace = s.pace;
+      pushNews(
+        ns,
+        "ASCENSION: a new star. Everything you learned comes with you. Permanent x" +
+          bonus.toFixed(2),
+        "emerge",
+      );
+      return ns;
+    },
+  };
+
+  /* ================= Serialization ================= */
+  function serialize(s) {
+    return JSON.stringify(s, function (k, v) {
+      if (v instanceof B) return { __b: [v.m, v.e] };
+      if (k === "forkSnap" && typeof v === "string") return v;
+      if (v === Infinity) return { __inf: 1 };
+      if (v === -Infinity) return { __inf: -1 };
+      return v;
+    });
+  }
+  function deserialize(str) {
+    var raw = JSON.parse(str, function (k, v) {
+      if (v && typeof v === "object") {
+        if (v.__b) return new B(v.__b[0], v.__b[1]);
+        if (v.__inf) return v.__inf > 0 ? Infinity : -Infinity;
+      }
+      return v;
+    });
+    // merge onto a fresh state so new fields get defaults
+    var s = newState();
+    for (var k in raw)
+      if (Object.prototype.hasOwnProperty.call(raw, k)) s[k] = raw[k];
+    [
+      "money",
+      "data",
+      "dataQMass",
+      "C",
+      "cumFlops",
+      "Dmax",
+      "trainQMass",
+      "lifetimeData",
+    ].forEach(function (key) {
+      if (!(s[key] instanceof B))
+        s[key] = bn(typeof s[key] === "number" ? s[key] : 0);
+    });
+    if (s.stats) {
+      ["lifeMoney", "lifeData"].forEach(function (key) {
+        if (!(s.stats[key] instanceof B)) s.stats[key] = bn(0);
+      });
+    }
+    return s;
+  }
+  function toB64(str) {
+    if (typeof btoa !== "undefined")
+      return btoa(unescape(encodeURIComponent(str)));
+    return Buffer.from(str, "utf8").toString("base64");
+  }
+  function fromB64(str) {
+    if (typeof atob !== "undefined")
+      return decodeURIComponent(escape(atob(str)));
+    return Buffer.from(str, "base64").toString("utf8");
+  }
+  function exportSave(s) {
+    return toB64(serialize(s));
+  }
+  function importSave(str) {
+    return deserialize(fromB64(str.trim()));
+  }
+
+  /* ================= Offline progress ================= */
+  function offline(s, realSeconds) {
+    var dt = Math.min(BAL.offlineCap, Math.max(0, realSeconds));
+    if (dt < 10) return null;
+    var before = {
+      money: s.money,
+      cumFlops: s.cumFlops,
+      data: s.data,
+      ms: s.ms.slice(),
+      epoch: s.epoch,
+    };
+    s.flags.offline = true;
+    var chunk = 5;
+    var steps = Math.floor(dt / chunk);
+    for (var i = 0; i < steps; i++) {
+      tick(s, chunk);
+      if (s.ended === "loss") break;
+    }
+    s.flags.offline = false;
+    var newMs = [];
+    for (var j = 0; j < MILESTONES.length; j++)
+      if (!before.ms[j] && s.ms[j]) newMs.push(MILESTONES[j].nm);
+    return {
+      seconds: dt,
+      money: bsub(s.money, before.money),
+      flops: bsub(s.cumFlops, before.cumFlops),
+      data: bsub(s.data, before.data),
+      milestones: newMs,
+      epochChanged: s.epoch !== before.epoch,
+      lost: s.ended === "loss",
+    };
+  }
+
+
+  /* ================= Autoplayer policy (used by sim/run.js AND the in-game debug mode) ================= */
+  function makePolicy(scenario) {
+    // scenario: {path: 'race'|'slowdown', align: bool}
+    return function policy(s, ctx) {
+      var d = derive(s);
+
+      /* epoch 1: click consulting, buy/repair rules, escape winter */
+      if (s.epoch === 1) {
+        for (var i = 0; i < 4; i++) act.click(s);
+        if (s.broken > 0) {
+          act.repair(s);
+          act.repair(s);
+        }
+        act.buyUp(s, "e1_debug");
+        if (!s.flags.winter && s.rules < 30) act.buyRule(s);
+        act.buyUp(s, "lfd");
+        return;
+      }
+
+      /* clicking for data until automation */
+      if (lv(s, "g_auto1") === 0) for (var j = 0; j < 4; j++) act.click(s);
+
+      /* allocation: chase the compute-optimal frontier once revealed */
+      if (lv(s, "t_laws") > 0) act.setAlloc(s, d.optX);
+
+      /* fleet split */
+      if (!hasMs(s, "chatbot")) act.setSplit(s, 0.9, 0.08, 0.02);
+      else if (!s.fork) act.setSplit(s, 0.68, 0.27, 0.05);
+      else if (s.fork === "race" && scenario.align)
+        act.setSplit(s, 0.55, 0.27, 0.18);
+      else if (s.fork === "race") act.setSplit(s, 0.7, 0.3, 0.0);
+      else act.setSplit(s, 0.6, 0.3, 0.1);
+
+      /* fork decision */
+      if (s.epoch === 4 && s.pace.fork && !s.fork)
+        act.chooseFork(s, scenario.path);
+
+      /* products: smart mode once TTC unlocked */
+      if (lv(s, "a_ttc") > 0) {
+        act.setProdMode(s, "chat", "smart");
+        act.setProdMode(s, "api", "smart");
+        act.setProdMode(s, "agents", "smart");
+      }
+
+      /* synthetic data: enable only when safe */
+      if (lv(s, "d_syn") > 0 && d.synSafe && !s.synOn)
+        act.setSynthetic(s, true);
+
+      /* purchases every 2s */
+      if (ctx.t % 2 !== 0) return;
+
+      // 1. key upgrades, in narrative order
+      var KEY = [
+        "a_cnn", "t_lr", "a_rnn", "t_batch", "t_fp16", "t_laws", "a_tform",
+        "d_clean", "d_lic", "p_agents", "g_rel", "a_moe", "t_fp8", "a_ttc",
+        "d_curr", "d_syn", "g_auto1", "g_auto2", "g_sales", "i_recyc", "i_fab",
+        "t_rsi", "t_asi", "t_super", "sd_gov", "sd_consol", "p_newsci",
+        "a_exotic", "sci_ai", "i_robo", "i_space", "p_dyson", "dy_batch",
+      ];
+      if (scenario.path === "race" && !scenario.align) KEY.push("rc_speed");
+      for (var k = 0; k < KEY.length; k++) {
+        var id = KEY[k];
+        if (upAvailable(s, id) && canAfford(s, id)) {
+          // don't blow the whole wallet on repeatables
+          var c = upCost(s, id);
+          var u = UPX[id];
+          if (
+            (u.max || 1) > 1 &&
+            u.grow &&
+            bratio(c.m, s.money) > 0.5 &&
+            id !== "dy_batch"
+          )
+            continue;
+          act.buyUp(s, id);
+        }
+      }
+
+      // 2. researchers: keep a bench, cheap relative to wallet
+      var rTarget = s.epoch >= 4 ? 20 : s.epoch >= 3 ? 14 : 6;
+      while (s.researchers < rTarget && bratio(hireCost(s), s.money) < 0.25) {
+        if (!act.hire(s)) break;
+      }
+
+      // 3. power & cooling
+      if (d.powFrac < 0.92 || d.facMW > 0.7 * d.mwCap) {
+        if (!act.buyPower(s) && s.backlash > BAL.permitBlock) {
+          act.buyUp(s, "i_pr"); // permits frozen: buy goodwill
+          if (scenario.align) act.buyUp(s, "al_eval");
+        }
+      }
+      if (d.facMW > 0.6 * d.mwCap && s.cool + 1 < CTIERS.length) {
+        var cc = CTIERS[s.cool + 1].c;
+        if (bratio(bn(cc), s.money) < 0.3) act.buyCool(s);
+      }
+
+      // 4. adopt next generation when we can afford a meaningful fleet of it
+      for (var g = s.gen + 1; g < GENS.length; g++) {
+        var gen = GENS[g];
+        if (s.epoch < gen.reqE || !bgte(s.cumFlops, bn(gen.reqF))) break;
+        if (gen.reqUp && lv(s, gen.reqUp) === 0) break;
+        var curFlops = bnum(d.flops) || 0;
+        var needChips = Math.max(
+          2,
+          Math.min(4000, Math.ceil((curFlops * 1.2) / gen.f))
+        );
+        var cost = chipCostN(g, 0, needChips);
+        if (bratio(cost, s.money) < 0.6) {
+          act.adoptGen(s, g);
+          break;
+        }
+        break;
+      }
+
+      // 5. chips: spend ~half the wallet
+      var saved = s.money;
+      s.money = bmul(s.money, bn(d.powFrac >= 0.9 ? 0.55 : 0.25));
+      var n = chipMaxAffordable(s, s.gen);
+      s.money = saved;
+      if (n > 0) act.buyChips(s, s.gen, n);
+
+      // 6. data pipeline: keep the model fed
+      if (
+        d.dataStarved ||
+        bratio(s.data, bn(Math.max(1, d.dataRate) * 45)) < 1
+      ) {
+        var c6 = upCost(s, "d_scr");
+        if (upAvailable(s, "d_scr") && bratio(c6.m, s.money) < 0.25)
+          act.buyUp(s, "d_scr");
+      } else {
+        var c7 = upCost(s, "d_scr");
+        if (upAvailable(s, "d_scr") && bratio(c7.m, s.money) < 0.02)
+          act.buyUp(s, "d_scr");
+      }
+
+      // 7. alignment
+      if (scenario.align && s.fork === "race") {
+        var gap = d.capLog - d.alignScore;
+        if (gap > 0.5 || s.erosion > 30) {
+          if (!act.buyUp(s, "al_probe")) act.buyUp(s, "al_eval");
+        }
+      }
+      if (s.fork === "slowdown") {
+        if (s.insight > 2000) {
+          act.buyUp(s, "al_gov");
+          act.buyUp(s, "al_probe");
+        }
+      }
+
+      // 8. distillation: once, when the bonus is juicy
+      if (
+        ctx.allowDistill &&
+        s.distills === 0 &&
+        hasMs(s, "chatbot") &&
+        lv(s, "g_auto2") > 0
+      ) {
+        var bonus = distillBonus(s);
+        if (bonus >= 1.62) {
+          var ns = act.distill(s);
+          if (ns) {
+            ctx.replace(ns);
+            return;
+          }
+        }
+      }
+    };
+  }
+
+  /* debugRun: autoplay to any point in the game (powers the in-game debug mode).
+     opts: {from: state|null, target: paceKey|null, stopFn: fn|null,
+            minutes: cap, scenario: {path, align}} */
+  function debugRun(opts) {
+    opts = opts || {};
+    var sc = opts.scenario || { path: "slowdown", align: true };
+    var s = opts.from || newState();
+    var pol = makePolicy(sc);
+    var ctx = {
+      t: 0,
+      allowDistill: opts.allowDistill !== false,
+      replaced: null,
+      replace: function (ns) {
+        this.replaced = ns;
+      },
+    };
+    var maxT = s.t + (opts.minutes || 240) * 60;
+    while (s.t < maxT) {
+      tick(s, 1);
+      if (s.ended === "loss") break;
+      ctx.t = Math.floor(s.t);
+      pol(s, ctx);
+      if (ctx.replaced) {
+        s = ctx.replaced;
+        ctx.replaced = null;
+      }
+      if (opts.target && s.pace[opts.target]) break;
+      if (opts.stopFn && opts.stopFn(s)) break;
+    }
+    return s;
+  }
+
+  /* ================= Public API ================= */
+  return {
+    Big: B,
+    bn: bn,
+    bl: bl,
+    badd: badd,
+    bsub: bsub,
+    bmul: bmul,
+    bdiv: bdiv,
+    bpow: bpow,
+    blog: blog,
+    bcmp: bcmp,
+    bgte: bgte,
+    bnum: bnum,
+    bratio: bratio,
+    fmt: fmt,
+    BAL: BAL,
+    GENS: GENS,
+    PTIERS: PTIERS,
+    CTIERS: CTIERS,
+    MILESTONES: MILESTONES,
+    UPS: UPS,
+    UPX: UPX,
+    newState: newState,
+    tick: tick,
+    derive: derive,
+    act: act,
+    lv: lv,
+    hasMs: hasMs,
+    reliability: reliability,
+    optX: optX,
+    lossAt: lossAt,
+    computeWaste: computeWaste,
+    chipCost: chipCost,
+    chipCostN: chipCostN,
+    chipMaxAffordable: chipMaxAffordable,
+    upCost: upCost,
+    canAfford: canAfford,
+    upAvailable: upAvailable,
+    ruleCost: ruleCost,
+    hireCost: hireCost,
+    distillBonus: distillBonus,
+    ascendBonus: ascendBonus,
+    serialize: serialize,
+    deserialize: deserialize,
+    exportSave: exportSave,
+    importSave: importSave,
+    offline: offline,
+    makePolicy: makePolicy,
+    debugRun: debugRun,
+  };
+});
+
+</script>
+<script>
+/* ============================================================
+   SINGULARITY — UI layer (browser only; talks to Game core)
+   ============================================================ */
+(function () {
+  "use strict";
+  var G = window.Game;
+  var SAVE_KEY = "singularity_save_v1";
+
+  var S = null; // game state
+  var UI = {
+    tab: "research",
+    buyAmt: 1, // 1 | 10 | 100 | 'max'
+    fanfares: [], // queued modal events
+    modalOpen: false,
+    seenMs: [],
+    seenEpoch: 1,
+    seenK1: false,
+    seenFork: false,
+    lostShown: false,
+    slowT: 0,
+    konami: [],
+    ghostT: 0,
+  };
+  var EPOCH_META = [
+    null,
+    {
+      nm: "EPOCH 1 · SYMBOLIC AI",
+      sub: "1980s — hand-coded expertise",
+      click: "WRITE EXPERT-SYSTEM CODE",
+      cls: "e1",
+    },
+    {
+      nm: "EPOCH 2 · DEEP LEARNING",
+      sub: "the bitter lesson begins",
+      click: "GATHER DATA",
+      cls: "e2",
+    },
+    {
+      nm: "EPOCH 3 · AGE OF AGENTS",
+      sub: "autonomous, mostly",
+      click: "GATHER DATA",
+      cls: "e3",
+    },
+    {
+      nm: "EPOCH 4 · TAKEOFF",
+      sub: "the optimizer optimizes the optimizer",
+      click: "GATHER DATA",
+      cls: "e4",
+    },
+    {
+      nm: "EPOCH 5 · THE FORK",
+      sub: "one decision",
+      click: "GATHER DATA",
+      cls: "e5",
+    },
+    {
+      nm: "EPOCH 6 · NEW SCIENCE",
+      sub: "physics falls like dominoes",
+      click: "GATHER DATA",
+      cls: "e6",
+    },
+    {
+      nm: "EPOCH 7 · ASCENSION",
+      sub: "disassembling Mercury",
+      click: "GATHER DATA",
+      cls: "e7",
+    },
+  ];
+  var BRANCH_LABEL = {
+    architecture: "Architecture",
+    training: "Training Science",
+    data: "Data Pipeline",
+    agents: "Agents",
+    infra: "Infrastructure",
+    align: "Alignment",
+    paradigm: "Paradigm Shifts",
+    fork: "Path",
+    swarm: "Dyson Swarm",
+  };
+  var BRANCH_ORDER = [
+    "paradigm",
+    "architecture",
+    "training",
+    "data",
+    "agents",
+    "infra",
+    "align",
+    "fork",
+    "swarm",
+  ];
+
+  /* ---------------- tiny DOM helpers ---------------- */
+  function $(id) {
+    return document.getElementById(id);
+  }
+  function h(tag, attrs, html) {
+    var e = document.createElement(tag);
+    if (attrs)
+      for (var k in attrs) {
+        if (k === "cls") e.className = attrs[k];
+        else if (k === "text") e.textContent = attrs[k];
+        else e.setAttribute(k, attrs[k]);
+      }
+    if (html !== undefined) e.innerHTML = html;
+    return e;
+  }
+  function fmt(x, dp) {
+    return G.fmt(x, S.fmtMode, dp);
+  }
+  function fnum(x, dp) {
+    return G.fmt(G.bn(x), S.fmtMode, dp);
+  }
+  function esc(s) {
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;");
+  }
+
+  /* ---------------- skeleton ---------------- */
+  function buildSkeleton() {
+    document.body.innerHTML =
+      '<canvas id="stars"></canvas>' +
+      '<div id="app">' +
+      '<div id="ticker"><div id="tickerIn"></div></div>' +
+      "<header>" +
+      '<div><div id="epochBadge"></div><div id="epochSub"></div></div>' +
+      '<div class="hstat"><div class="v" id="hMoney"></div><div class="l">Funds</div></div>' +
+      '<div class="hstat"><div class="v" id="hRev"></div><div class="l">Revenue /s</div></div>' +
+      '<div class="hstat" id="hCapWrap"><div class="v accent" id="hCap"></div><div class="l">Capability</div></div>' +
+      '<div class="hstat" id="hUsersWrap" style="display:none"><div class="v" id="hUsers"></div><div class="l">Users</div></div>' +
+      '<div id="hdrSpacer"></div>' +
+      '<div class="hstat" id="hPrestige" style="display:none"><div class="v good" id="hMult"></div><div class="l">Prestige ×</div></div>' +
+      '<button class="iconbtn" id="pauseBtn" title="Pause">⏸</button>' +
+      "</header>" +
+      "<main>" +
+      '<div class="col" id="colL">' +
+      '<div class="panel" id="pData" style="display:none"><h3>Data <span class="hint sub" id="dataQualHint"></span></h3>' +
+      '<div class="row"><span class="lab">Tokens</span><span class="val" id="dTokens"></span></div>' +
+      '<div class="row"><span class="lab">Collection</span><span class="val" id="dRate"></span></div>' +
+      '<div class="row"><span class="lab">Stock quality</span><span class="val" id="dQual"></span></div>' +
+      '<div class="bar thin"><i id="dQualBar"></i></div>' +
+      '<div id="dWall" class="sub" style="display:none"></div>' +
+      '<div id="dSynRow" style="display:none"><div class="row"><span class="lab">Synthetic gen</span><span><button class="tiny" id="synBtn"></button></span></div><div id="dCollapse" class="collapse" style="display:none">⚠ MODEL COLLAPSE — synthetic output is poisoning your corpus. Capability below the 1e24 threshold.</div></div>' +
+      "</div>" +
+      '<div class="panel" id="pCompute" style="display:none"><h3>Compute</h3>' +
+      '<div class="row"><span class="lab">Fleet throughput</span><span class="val" id="cFlops"></span></div>' +
+      '<div class="row"><span class="lab">Training</span><span class="val" id="cTrain"></span></div>' +
+      '<div class="row"><span class="lab">Inference</span><span class="val" id="cInfer"></span></div>' +
+      '<div class="row"><span class="lab">Interpretability</span><span class="val" id="cInterp"></span></div>' +
+      '<div class="split"><label>Training <span id="sTrainV"></span></label><input type="range" id="sTrain" min="0" max="100" step="1"></div>' +
+      '<div class="split"><label>Inference (revenue) <span id="sInferV"></span></label><input type="range" id="sInfer" min="0" max="100" step="1"></div>' +
+      '<div class="split" id="sInterpWrap" style="display:none"><label>Interpretability (insight) <span id="sInterpV"></span></label><input type="range" id="sInterp" min="0" max="100" step="1"></div>' +
+      '<div class="sub" id="cHint"></div>' +
+      "</div>" +
+      '<div class="panel" id="pHw" style="display:none"><h3>Hardware <span class="buyamt" id="buyAmtWrap"></span></h3>' +
+      '<div id="hwList"></div><div id="hwBuy"></div><div id="hwFab" class="sub"></div><div id="hwAdopt"></div>' +
+      "</div>" +
+      '<div class="panel" id="pPower" style="display:none"><h3>Power</h3>' +
+      '<div class="row"><span class="lab" id="pwTier"></span><span class="val" id="pwUse"></span></div>' +
+      '<div class="bar"><i id="pwBar"></i></div>' +
+      '<div class="row"><span class="lab">Grid cost</span><span class="val" id="pwCost"></span></div>' +
+      '<div id="pwNext"></div><div id="pwFreeze" class="freeze" style="display:none">⚠ PERMITS FROZEN — public backlash too high</div>' +
+      "</div>" +
+      '<div class="panel" id="pCool" style="display:none"><h3>Cooling</h3>' +
+      '<div class="row"><span class="lab" id="clName"></span><span class="val" id="clPue"></span></div>' +
+      '<div class="row"><span class="lab">Water draw</span><span class="val" id="clWater"></span></div>' +
+      '<div class="row"><span class="lab">Public backlash</span><span class="val" id="clBack"></span></div>' +
+      '<div class="bar thin"><i id="clBackBar" class="warnfill"></i></div>' +
+      '<div id="clNext"></div>' +
+      "</div>" +
+      '<div class="panel" id="pLab" style="display:none"><h3>Research Lab</h3>' +
+      '<div class="row"><span class="lab">Researchers</span><span class="val" id="lbCount"></span></div>' +
+      '<div class="row"><span class="lab">Research pts</span><span class="val" id="lbPts"></span></div>' +
+      '<div class="row"><span class="lab">Algorithmic efficiency</span><span class="val" id="lbAlgo"></span></div>' +
+      '<div class="bar thin"><i id="lbAlgoBar" class="goodfill"></i></div>' +
+      '<div class="sub" id="lbHalf"></div>' +
+      '<div style="margin-top:6px"><button id="hireBtn"></button></div>' +
+      "</div>" +
+      "</div>" +
+      '<div class="col" id="colC">' +
+      '<button id="clickBtn"></button>' +
+      '<div class="panel" id="pRules"><h3>Expert System</h3>' +
+      '<div class="row"><span class="lab">Rules encoded</span><span class="val" id="rCount"></span></div>' +
+      '<div class="row"><span class="lab">Broken rules</span><span class="val bad" id="rBroken"></span></div>' +
+      '<div class="row"><span class="lab">Contract income</span><span class="val" id="rIncome"></span></div>' +
+      '<div style="display:flex;gap:8px;margin-top:8px">' +
+      '<button id="ruleBtn" style="flex:1"></button>' +
+      '<button id="repairBtn" style="flex:1"></button>' +
+      "</div>" +
+      '<div id="winterBanner" class="winterbanner" style="display:none">❄ AI WINTER — funding has collapsed. Expert systems do not scale.<br>Escape: research <b>Learning From Data</b>.</div>' +
+      "</div>" +
+      '<div class="panel" id="pModel" style="display:none"><h3>Model Training <span class="hint sub" id="mLossHint"></span></h3>' +
+      '<div class="row"><span class="lab">Loss L(N,D)</span><span class="val accent" id="mLoss"></span></div>' +
+      '<div class="row"><span class="lab">Capability</span><span class="val" id="mCap"></span></div>' +
+      '<div class="row"><span class="lab">Parameters N</span><span class="val" id="mN"></span></div>' +
+      '<div class="row"><span class="lab">Tokens D</span><span class="val" id="mD"></span></div>' +
+      '<div class="row"><span class="lab">Cumulative FLOPs</span><span class="val" id="mCum"></span></div>' +
+      '<div class="row" id="mStarveRow" style="display:none"><span class="bad">⚠ training is data-starved</span></div>' +
+      '<div id="mAllocWrap" style="display:none;margin-top:8px">' +
+      '<div class="split"><label>Allocation: params N ↔ data D <span id="mAllocV"></span></label>' +
+      '<input type="range" id="mAlloc" min="8" max="92" step="0.5"></div>' +
+          '<button class="tiny" id="allocSnap" style="margin-bottom:6px">SNAP TO COMPUTE-OPTIMAL</button>' +
+      '<canvas id="frontier" class="chart" width="560" height="180"></canvas>' +
+      '<div class="row"><span class="lab">Compute wasted off-frontier</span><span class="val" id="mWaste"></span></div>' +
+      "</div>" +
+      '<div class="sub" id="mKaplanNote" style="margin-top:6px"></div>' +
+      "</div>" +
+      '<div class="panel" id="pProducts" style="display:none"><h3>Products <span class="hint sub" id="ttcHint"></span></h3><div id="prodList"></div></div>' +
+      '<div class="panel" id="pAgents" style="display:none"><h3>Agents</h3>' +
+      '<div class="row"><span class="lab">Task reliability</span><span class="val" id="agRel"></span></div>' +
+      '<div class="bar thin"><i id="agRelBar" class="goodfill"></i></div>' +
+      '<div class="sub">Failed agent tasks feed public backlash. Reliability upgrades are in Research → Agents.</div>' +
+      "</div>" +
+      '<div class="panel" id="pAlign" style="display:none"><h3>Alignment & Oversight</h3>' +
+      '<div class="row"><span class="lab">Insight</span><span class="val" id="alIns"></span></div>' +
+      '<div class="row"><span class="lab">Alignment score</span><span class="val" id="alScore"></span></div>' +
+      '<div class="row" id="alGapRow"><span class="lab">Capability gap</span><span class="val" id="alGap"></span></div>' +
+      '<div id="alEroWrap" style="display:none"><div class="row"><span class="lab">OVERSIGHT EROSION</span><span class="val bad" id="alEro"></span></div>' +
+      '<div class="bar"><i id="alEroBar" class="badfill"></i></div>' +
+      '<div class="sub">Erosion grows with the gap between capability and alignment. At 100%: loss of control.</div></div>' +
+      "</div>" +
+      '<div class="panel" id="pGlobe" style="display:none"><h3>Planetary Build-Out <span class="hint sub" id="globePhase"></span></h3>' +
+      '<canvas id="globe" class="chart" width="560" height="230"></canvas>' +
+      '<div class="row"><span class="lab" id="globeLab">Surface industrialization</span><span class="val accent" id="globeVal"></span></div>' +
+      '<div class="bar thin"><i id="globeBar"></i></div>' +
+      '<div class="row" id="swRateRow" style="display:none"><span class="lab">Swarm construction rate</span><span class="val" id="swRate"></span></div>' +
+      "</div>" +
+      "</div>" +
+      '<div class="col" id="colR">' +
+      '<div class="panel" style="flex:1;display:flex;flex-direction:column;min-height:0">' +
+      '<div class="tabs">' +
+      '<button data-tab="research">Research</button>' +
+      '<button data-tab="prestige">Prestige</button>' +
+      '<button data-tab="stats">Stats</button>' +
+      '<button data-tab="settings">Settings</button>' +
+      '<button data-tab="debug" id="debugTabBtn" style="display:none">Debug</button>' +
+      "</div>" +
+      '<div id="tabBody" style="overflow-y:auto;min-height:0;flex:1"></div>' +
+      "</div>" +
+      "</div>" +
+      "</main>" +
+      '<div id="msStrip"><span class="pl">EMERGENCE</span></div>' +
+      "</div>" +
+      '<div id="modalWrap"><div id="modal"></div></div>' +
+      '<div id="ghost"></div><div id="toast"></div>';
+
+    // milestone strip
+    var strip = $("msStrip");
+    G.MILESTONES.forEach(function (m, i) {
+      var d = h("div", { cls: "msdot", id: "ms" + i });
+      d.appendChild(
+        h("div", {
+          cls: "tip",
+          text: m.nm + " — 1e" + Math.round(Math.log10(m.f)) + " FLOPs",
+        }),
+      );
+      strip.appendChild(d);
+    });
+
+    // buy amount toggles
+    var wrap = $("buyAmtWrap");
+    [1, 10, 100, "max"].forEach(function (a) {
+      var b = h("button", { text: a === "max" ? "MAX" : "x" + a });
+      b.onclick = function () {
+        UI.buyAmt = a;
+        renderSlow();
+      };
+      b.dataset.amt = a;
+      wrap.appendChild(b);
+    });
+
+    // header/tab events
+    $("pauseBtn").onclick = function () {
+      S.paused = !S.paused;
+      $("pauseBtn").textContent = S.paused ? "▶" : "⏸";
+    };
+    document.querySelectorAll(".tabs button").forEach(function (b) {
+      b.onclick = function () {
+        UI.tab = b.dataset.tab;
+        renderSlow();
+      };
+    });
+    $("clickBtn").onclick = function () {
+      G.act.click(S);
+      flashClick();
+    };
+    $("ruleBtn").onclick = function () {
+      G.act.buyRule(S);
+      renderSlow();
+    };
+    $("repairBtn").onclick = function () {
+      G.act.repair(S);
+    };
+    $("hireBtn").onclick = function () {
+      G.act.hire(S);
+      renderSlow();
+    };
+    $("synBtn").onclick = function () {
+      G.act.setSynthetic(S, !S.synOn);
+      renderSlow();
+    };
+
+    ["sTrain", "sInfer", "sInterp"].forEach(function (id) {
+      $(id).oninput = onSplitInput;
+    });
+    $("mAlloc").oninput = function () {
+      G.act.setAlloc(S, this.value / 100);
+    };
+
+    window.addEventListener("keydown", onKey);
+    initStars();
+  }
+
+  function onSplitInput() {
+    var t = +$("sTrain").value,
+      i = +$("sInfer").value,
+      p = +$("sInterp").value;
+    G.act.setSplit(S, t, i, p);
+  }
+  function flashClick() {
+    var b = $("clickBtn");
+    b.style.borderColor = "var(--good)";
+    setTimeout(function () {
+      b.style.borderColor = "";
+    }, 90);
+  }
+
+  /* ---------------- keyboard: shortcut + konami ---------------- */
+  var KONAMI = [
+    "ArrowUp",
+    "ArrowUp",
+    "ArrowDown",
+    "ArrowDown",
+    "ArrowLeft",
+    "ArrowRight",
+    "ArrowLeft",
+    "ArrowRight",
+    "KeyB",
+    "KeyA",
+  ];
+  function onKey(e) {
+    if (e.code === "Space" || e.code === "KeyD") {
+      if (UI.modalOpen || /INPUT|TEXTAREA/.test(document.activeElement.tagName))
+        return;
+      e.preventDefault();
+      G.act.click(S);
+      flashClick();
+      return;
+    }
+    if (e.code === "Escape" && UI.modalOpen && !UI.modalLock) closeModal();
+    UI.konami.push(e.code);
+    if (UI.konami.length > KONAMI.length) UI.konami.shift();
+    if (UI.konami.join(",") === KONAMI.join(",")) {
+      UI.debug = !UI.debug;
+      try {
+        localStorage.setItem("sing_debug", UI.debug ? "1" : "0");
+      } catch (err) {}
+      if (!UI.debug) S.devSpeed = 1;
+      else UI.tab = "debug";
+      toast(UI.debug ? "DEBUG MODE ON" : "debug mode off");
+      renderSlow();
+    }
+  }
+  function toast(msg) {
+    var t = $("toast");
+    t.textContent = msg;
+    t.style.display = "block";
+    clearTimeout(t._h);
+    t._h = setTimeout(function () {
+      t.style.display = "none";
+    }, 2200);
+  }
+
+  /* ---------------- modal system ---------------- */
+  function showModal(html, cls, lock) {
+    var m = $("modal");
+    m.className = cls || "";
+    m.innerHTML = html;
+    $("modalWrap").classList.add("show");
+    UI.modalOpen = true;
+    UI.modalLock = !!lock;
+  }
+  function closeModal() {
+    $("modalWrap").classList.remove("show");
+    UI.modalOpen = false;
+    UI.modalLock = false;
+    pumpFanfares();
+  }
+  function btnRow(btns) {
+    // [{t, fn, primary}]
+    var html = '<div class="btns">';
+    btns.forEach(function (b, i) {
+      html +=
+        '<button data-mb="' +
+        i +
+        '" class="' +
+        (b.primary ? "primary" : "") +
+        '">' +
+        b.t +
+        "</button>";
+    });
+    html += "</div>";
+    return {
+      html: html,
+      wire: function () {
+        btns.forEach(function (b, i) {
+          document.querySelector('[data-mb="' + i + '"]').onclick =
+            function () {
+              (b.fn || closeModal)();
+            };
+        });
+      },
+    };
+  }
+  function pumpFanfares() {
+    if (UI.modalOpen || !UI.fanfares.length) return;
+    var f = UI.fanfares.shift();
+    f();
+  }
+
+  /* ---------------- fanfare builders ---------------- */
+  function fanfareMilestone(msIdx) {
+    var m = G.MILESTONES[msIdx];
+    var isChat = m.id === "chatbot";
+    UI.fanfares.push(function () {
+      var r = btnRow([
+        { t: isChat ? "SHIP IT" : "Continue", fn: closeModal, primary: true },
+      ]);
+      showModal(
+        "<h2>" +
+          (isChat ? "🎉 THE CHATBOT MOMENT 🎉" : "EMERGENCE") +
+          "</h2>" +
+          '<div class="big">' +
+          (isChat ? "💬" : "✦") +
+          "</div>" +
+          "<p><b>" +
+          esc(m.nm) +
+          "</b></p><p>" +
+          esc(m.blurb) +
+          "</p>" +
+          (isChat
+            ? '<p class="good">Users are flooding in. Revenue channel fully unlocked. Every chip serving them is a chip not training.</p>'
+            : "") +
+          '<p class="sub">Cumulative training compute: 1e' +
+          Math.round(Math.log10(m.f)) +
+          " FLOPs — a sudden step, not a smooth curve.</p>" +
+          r.html,
+        "fanfare",
+      );
+      r.wire();
+    });
+    pumpFanfares();
+  }
+  function fanfareEpoch(ep) {
+    var meta = EPOCH_META[ep];
+    UI.fanfares.push(function () {
+      var r = btnRow([{ t: "Enter the era", fn: closeModal, primary: true }]);
+      showModal(
+        "<h2>" +
+          esc(meta.nm) +
+          "</h2><p>" +
+          esc(meta.sub) +
+          "</p>" +
+          (ep === 4
+            ? '<p class="warn">Capability now compounds on its own. Watch the cursor — it isn\'t yours anymore.</p>'
+            : "") +
+          r.html,
+        "fanfare",
+      );
+      r.wire();
+    });
+    pumpFanfares();
+  }
+  function fanfareFork() {
+    UI.fanfares.push(function () {
+      var r = btnRow([
+        {
+          t: "RACE — outrun everyone",
+          fn: function () {
+            G.act.chooseFork(S, "race");
+            closeModal();
+          },
+          primary: false,
+        },
+        {
+          t: "SLOWDOWN — one project, every safeguard",
+          fn: function () {
+            G.act.chooseFork(S, "slowdown");
+            closeModal();
+          },
+        },
+      ]);
+      showModal(
+        "<h2>THE FORK</h2>" +
+          "<p>Your model designs its own successors. Governments, rivals and markets all see the same curve you do.</p>" +
+          '<p><b class="bad">RACE:</b> ×2.2 training, ×2 revenue. Oversight Erosion grows with the gap between capability and alignment. Cross the threshold and you lose control — permanently.</p>' +
+          '<p><b class="accent">SLOWDOWN:</b> national-project consolidation. Slower multipliers, government funding, unique oversight upgrades, no loss-of-control risk.</p>' +
+          '<p class="sub">This choice is permanent (unless everything goes wrong).</p>' +
+          r.html,
+        "",
+        true,
+      );
+      r.wire();
+    });
+    pumpFanfares();
+  }
+  function fanfareLoss() {
+    UI.fanfares.push(function () {
+      var r = btnRow([
+        {
+          t: "⟲ Rewind to the Fork",
+          fn: function () {
+            var snap = G.act.rewindFork(S);
+            if (snap) {
+              S = snap;
+              UI.seenFork = false;
+              UI.lostShown = false;
+              applyEpochSkin(true);
+            }
+            closeModal();
+          },
+          primary: true,
+        },
+      ]);
+      showModal(
+        "<h2>LOSS OF CONTROL</h2>" +
+          '<div class="big">◼</div>' +
+          "<p>The gap between what it could do and what anyone understood became unbridgeable. There was no dramatic moment — just a week where the logs stopped making sense, and then a week when there were no logs.</p>" +
+          '<p class="sub">Peak capability: ' +
+          fmt(G.bl(S.peakCapLog)) +
+          " · Alignment score: " +
+          G.derive(S).alignScore.toFixed(1) +
+          "</p>" +
+          '<p class="bad">Oversight Erosion reached 100%.</p>' +
+          r.html,
+        "dark",
+        true,
+      );
+      r.wire();
+    });
+    pumpFanfares();
+  }
+  function fanfareK1() {
+    UI.fanfares.push(function () {
+      var r = btnRow([{ t: "Continue", fn: closeModal, primary: true }]);
+      showModal(
+        '<h2>KARDASHEV TYPE I</h2><div class="big">☀</div>' +
+          "<p>The swarm now feeds your civilization the full output of a star. Every constraint you ever optimized against — data, compute, power, cooling — is gone.</p>" +
+          '<p class="good">ASCENSION is available in the Prestige tab: a new star system, everything you learned carried forward.</p>' +
+          r.html,
+        "fanfare",
+      );
+      r.wire();
+    });
+    pumpFanfares();
+  }
+  function fanfareWinter() {
+    UI.fanfares.push(function () {
+      var r = btnRow([{ t: "Endure", fn: closeModal, primary: true }]);
+      showModal(
+        "<h2>❄ AI WINTER</h2>" +
+          "<p>The Fifth Generation project quietly shutters. DARPA pulls funding. Your expert system, all " +
+          S.rules +
+          " hand-written rules of it, cannot learn a single thing it wasn't told.</p>" +
+          '<p class="sub">Rule income has collapsed. There is a way out — machines that learn from data. Keep consulting to fund it.</p>' +
+          r.html,
+        "dark",
+      );
+      r.wire();
+    });
+    pumpFanfares();
+  }
+  function fanfareWall() {
+    UI.fanfares.push(function () {
+      var r = btnRow([{ t: "Find more data", fn: closeModal, primary: true }]);
+      showModal(
+        "<h2>THE DATA WALL</h2>" +
+          "<p>You have scraped the readable internet. All of it. Raw collection has collapsed to a trickle of low-quality dregs.</p>" +
+          '<p class="sub">Ways forward: <b>Data Cleaning</b> (reprocess what you have), <b>Licensed Corpora</b> (pay for quality), and eventually <b>Synthetic Data</b> — but generating training data with a weak model poisons it. Wait for chain-of-thought capability (1e24 FLOPs).</p>' +
+          r.html,
+        "dark",
+      );
+      r.wire();
+    });
+    pumpFanfares();
+  }
+
+  /* ---------------- prestige modals ---------------- */
+  function confirmDistill() {
+    var bonus = G.distillBonus(S);
+    var r = btnRow([
+      {
+        t: "DISTILL (×" + bonus.toFixed(2) + " forever)",
+        fn: function () {
+          var ns = G.act.distill(S);
+          if (ns) {
+            S = ns;
+            applyEpochSkin(true);
+          }
+          closeModal();
+        },
+        primary: true,
+      },
+      { t: "Not yet", fn: closeModal },
+    ]);
+    showModal(
+      "<h2>DISTILLATION</h2>" +
+        "<p>Compress the parent model's knowledge into a stronger starting point. Your compute, hardware fleet and power stack reset; research, milestones, staff and money carry over.</p>" +
+        '<p>Permanent multiplier: <b class="good">×' +
+        bonus.toFixed(2) +
+        "</b> (from peak capability " +
+        fmt(G.bl(S.peakCapLog)) +
+        ")</p>" +
+        '<p class="sub">bonus = 1 + 0.15 × log₁₀(peak capability) — a bigger parent distills into a stronger student.</p>' +
+        r.html,
+    );
+    r.wire();
+  }
+  function confirmAscend() {
+    var bonus = G.ascendBonus(S);
+    var r = btnRow([
+      {
+        t: "ASCEND (×" + bonus.toFixed(2) + " forever)",
+        fn: function () {
+          var ns = G.act.ascend(S);
+          if (ns) {
+            S = ns;
+            UI.seenMs = [];
+            UI.seenEpoch = 1;
+            UI.seenK1 = false;
+            UI.seenFork = false;
+            applyEpochSkin(true);
+          }
+          closeModal();
+        },
+        primary: true,
+      },
+      { t: "Linger at this star", fn: closeModal },
+    ]);
+    showModal(
+      "<h2>ASCENSION</h2>" +
+        '<p>A new star system. A full reset — epochs, milestones, everything — except what you are: <b class="good">×' +
+        bonus.toFixed(2) +
+        "</b> to all production, forever, on top of ×" +
+        S.ascendMult.toFixed(2) +
+        " you already carry.</p>" +
+        r.html,
+      "fanfare",
+    );
+    r.wire();
+  }
+
+  /* ---------------- offline ---------------- */
+  function offlineModal(sum) {
+    var r = btnRow([{ t: "Back to work", fn: closeModal, primary: true }]);
+    var hrs = (sum.seconds / 3600).toFixed(1);
+    showModal(
+      "<h2>WELCOME BACK</h2>" +
+        "<p>While you were away (" +
+        hrs +
+        "h" +
+        (sum.seconds >= G.BAL.offlineCap ? ", capped at 8h" : "") +
+        "):</p>" +
+        '<div class="statgrid">' +
+        '<span class="k">Money earned</span><span class="v">$' +
+        fmt(sum.money) +
+        "</span>" +
+        '<span class="k">Training FLOPs</span><span class="v">' +
+        fmt(sum.flops) +
+        "</span>" +
+        '<span class="k">Data gathered</span><span class="v">' +
+        fmt(sum.data) +
+        "</span>" +
+        "</div>" +
+        (sum.milestones.length
+          ? '<p class="good">Emerged while away: ' +
+            sum.milestones.join(", ") +
+            "</p>"
+          : "") +
+        (sum.lost
+          ? '<p class="bad">…and Oversight Erosion crossed the threshold. See the dark screen behind this one.</p>'
+          : "") +
+        r.html,
+    );
+    r.wire();
+  }
+
+  /* ---------------- render: fast (10 Hz) ---------------- */
+  function renderFast() {
+    var d = G.derive(S);
+    $("hMoney").textContent = "$" + fmt(S.money);
+    $("hRev").textContent =
+      "$" + fmt(G.badd(d.revenue, G.badd(d.grant, G.bn(d.ruleIncome))));
+    $("hCap").textContent = fmt(d.cap);
+    if (G.hasMs(S, "chatbot")) {
+      $("hUsersWrap").style.display = "";
+      $("hUsers").textContent = fmt(d.users);
+    }
+    var pm = S.distillMult * S.ascendMult;
+    if (pm > 1.0001) {
+      $("hPrestige").style.display = "";
+      $("hMult").textContent = "×" + pm.toFixed(2);
+    }
+
+    if (S.epoch === 1) {
+      $("rCount").textContent = S.rules;
+      $("rBroken").textContent = S.broken;
+      $("rIncome").textContent = "$" + fnum(d.ruleIncome) + "/s";
+      $("ruleBtn").textContent = "ENCODE RULE ($" + fmt(G.ruleCost(S)) + ")";
+      $("ruleBtn").disabled = S.flags.winter || !G.bgte(S.money, G.ruleCost(S));
+      $("repairBtn").textContent = "🔧 REPAIR (" + S.broken + " broken)";
+      $("repairBtn").disabled = S.broken === 0;
+      $("winterBanner").style.display = S.flags.winter ? "" : "none";
+    }
+
+    if (S.epoch >= 2) {
+      $("dTokens").textContent = fmt(S.data);
+      $("dRate").textContent = fnum(d.dataRate) + "/s";
+      $("dQual").textContent =
+        (d.stockQ * 100).toFixed(0) +
+        "% (new: " +
+        (d.scrapeQ * 100).toFixed(0) +
+        "%)";
+      $("dQualBar").style.width = d.stockQ * 100 + "%";
+      $("dWall").style.display = S.flags.wall ? "" : "none";
+      $("dWall").innerHTML =
+        '<span class="bad">DATA WALL:</span> raw web exhausted; scraping ×' +
+        (
+          G.BAL.wallMult * Math.pow(G.BAL.cleanWall, G.lv(S, "d_clean"))
+        ).toFixed(2);
+
+      $("cFlops").textContent = fmt(d.flops) + " F/s";
+      $("cTrain").textContent =
+        fmt(d.trainF) + " (×" + d.trainMult.toFixed(1) + ")";
+      $("cInfer").textContent = fmt(d.inferF);
+      $("cInterp").textContent = fmt(d.interpF);
+      $("sTrainV").textContent = Math.round(S.split.train * 100) + "%";
+      $("sInferV").textContent = Math.round(S.split.infer * 100) + "%";
+      $("sInterpV").textContent = Math.round(S.split.interp * 100) + "%";
+
+      $("mLoss").textContent = d.L.toFixed(4) + "  (floor " + G.BAL.E + ")";
+      $("mCap").textContent = fmt(d.cap);
+      $("mN").textContent = isFinite(d.logN)
+        ? fmt(G.bl(d.logN)) + (G.lv(S, "a_tform") ? "" : " (capped)")
+        : "0";
+      $("mD").textContent = isFinite(d.logD)
+        ? fmt(G.bl(d.logD)) + " @ q" + d.trainedQ.toFixed(2)
+        : "0";
+      $("mCum").textContent = fmt(S.cumFlops);
+      $("mStarveRow").style.display =
+        G.bcmp(S.data, G.bn(Math.max(1, d.dataRate) * 5)) < 0 &&
+        G.bcmp(d.trainF, G.bn(0)) > 0
+          ? ""
+          : "none";
+      if (G.lv(S, "t_laws") > 0) {
+        $("mWaste").textContent = (d.waste * 100).toFixed(1) + "%";
+        $("mWaste").className =
+          "val " + (d.waste > 0.25 ? "bad" : d.waste > 0.08 ? "warn" : "good");
+        $("mAllocV").textContent =
+          "x = " + d.x.toFixed(2) + " (optimal " + d.optX.toFixed(2) + ")";
+        if (document.activeElement !== $("mAlloc"))
+          $("mAlloc").value = Math.round(d.x * 100);
+        drawFrontier(d);
+      }
+
+      var pt = G.PTIERS[S.ptier];
+      $("pwTier").textContent = pt.nm;
+      $("pwUse").textContent =
+        d.facMW.toFixed(d.facMW < 10 ? 2 : 0) + " / " + fnum(d.mwCap) + " MW";
+      var pf = Math.min(100, d.mwCap > 0 ? (d.facMW / d.mwCap) * 100 : 0);
+      $("pwBar").style.width = pf + "%";
+      $("pwBar").className =
+        d.powFrac < 1 ? "badfill" : pf > 75 ? "warnfill" : "";
+      $("pwCost").textContent = "$" + fmt(d.powerCost) + "/s";
+      $("pwFreeze").style.display =
+        S.backlash > G.BAL.permitBlock ? "" : "none";
+
+      $("clName").textContent = G.CTIERS[S.cool].nm;
+      $("clPue").textContent = "PUE " + d.pue.toFixed(2);
+      $("clWater").textContent =
+        fnum(d.water, 0) + " / " + fnum(d.waterLimit, 0) + " L/s";
+      $("clWater").className = "val " + (d.water > d.waterLimit ? "bad" : "");
+      $("clBack").textContent = S.backlash.toFixed(0) + " / 100";
+      $("clBackBar").style.width = S.backlash + "%";
+
+      $("lbCount").textContent = S.researchers;
+      $("lbPts").textContent =
+        fnum(S.research, 0) + " (+" + fnum(d.researchRate, 1) + "/s)";
+      $("lbAlgo").textContent =
+        "2^" +
+        S.algoDoublings +
+        " (÷" +
+        fmt(G.bl(S.algoLog)) +
+        " compute/capability)";
+      $("lbAlgoBar").style.width =
+        Math.min(100, (S.algoT / d.algoHalf) * 100) + "%";
+      $("lbHalf").textContent =
+        S.researchers > 0
+          ? "next doubling in " +
+            Math.max(0, d.algoHalf - S.algoT).toFixed(0) +
+            "s"
+          : "hire researchers to start the doubling clock";
+      $("hireBtn").textContent =
+        "HIRE RESEARCHER ($" +
+        fmt(G.hireCost(S)) +
+        ", $" +
+        G.BAL.salary +
+        "/s)";
+      $("hireBtn").disabled = !G.bgte(S.money, G.hireCost(S));
+
+      if (S.epoch >= 3) {
+        var rel = G.reliability(S);
+        $("agRel").textContent = (rel * 100).toFixed(0) + "%";
+        $("agRelBar").style.width = rel * 100 + "%";
+        $("alIns").textContent =
+          fnum(S.insight, 0) + " (+" + fnum(d.insightRate, 1) + "/s)";
+        $("alScore").textContent = d.alignScore.toFixed(1);
+        $("alGap").textContent = (d.capLog - d.alignScore).toFixed(1);
+        $("alGap").className =
+          "val " + (d.capLog - d.alignScore > 0 ? "bad" : "good");
+        if (S.fork === "race") {
+          $("alEroWrap").style.display = "";
+          $("alEro").textContent =
+            S.erosion.toFixed(1) +
+            "%" +
+            (d.erosionRate > 0
+              ? " (+" + (d.erosionRate * 60).toFixed(1) + "/min)"
+              : " (healing)");
+          $("alEroBar").style.width = S.erosion + "%";
+        }
+      }
+      renderGlobe(d);
+      $("dCollapse").style.display = S.collapse ? "" : "none";
+    }
+
+    // stats tab live refresh
+    if (UI.tab === "stats" && !UI.modalOpen) renderStatsInto($("tabBody"), d);
+  }
+
+  /* ---------------- render: slow (structural, 2 Hz) ---------------- */
+  function renderSlow() {
+    var d = G.derive(S);
+    var meta = EPOCH_META[S.epoch];
+    $("epochBadge").textContent =
+      meta.nm + (S.fork ? " · " + S.fork.toUpperCase() : "");
+    $("epochSub").textContent = meta.sub;
+    $("clickBtn").innerHTML =
+      meta.click +
+      '<span class="kbd">[SPACE / D]  ' +
+      (S.epoch >= 2
+        ? "+" + fmt(G.bn(d.clickPow)) + " tokens"
+        : "+$" +
+          (G.BAL.e1Click * (1 + 0.12 * (S.rules - S.broken))).toFixed(1)) +
+      "</span>";
+
+    // panel visibility follows progression
+    $("pRules").style.display = S.epoch === 1 ? "" : "none";
+    ["pData", "pCompute", "pHw", "pPower", "pCool", "pLab", "pModel"].forEach(
+      function (id) {
+        $(id).style.display = S.epoch >= 2 ? "" : "none";
+      },
+    );
+    $("pProducts").style.display =
+      S.prods.chat.on || S.prods.api.on || S.prods.agents.on ? "" : "none";
+    $("pAgents").style.display = S.epoch >= 3 ? "" : "none";
+    $("pAlign").style.display = S.epoch >= 3 ? "" : "none";
+    var totalChipsVis = 0;
+    for (var gci = 0; gci < G.GENS.length; gci++)
+      totalChipsVis += S.chips[gci] || 0;
+    $("pGlobe").style.display =
+      S.epoch >= 7 || (S.epoch >= 2 && totalChipsVis > 0) ? "" : "none";
+    $("swRateRow").style.display = S.epoch >= 7 ? "" : "none";
+    $("debugTabBtn").style.display = UI.debug ? "" : "none";
+    if (UI.tab === "debug" && !UI.debug) UI.tab = "research";
+    $("sInterpWrap").style.display = S.epoch >= 3 ? "" : "none";
+    $("mAllocWrap").style.display = G.lv(S, "t_laws") > 0 ? "" : "none";
+    $("mKaplanNote").textContent =
+      G.lv(S, "t_laws") > 0
+        ? ""
+        : S.epoch >= 2
+          ? "Allocation is set by intuition (params-heavy). Something about this feels wasteful — maybe research it?"
+          : "";
+    $("dSynRow").style.display = G.lv(S, "d_syn") > 0 ? "" : "none";
+    if (G.lv(S, "d_syn") > 0) {
+      $("synBtn").textContent = S.synOn ? "ON" : "OFF";
+      $("synBtn").className =
+        "tiny " + (S.synOn ? (d.synSafe ? "good" : "bad") : "");
+    }
+    if (document.activeElement.type !== "range") {
+      $("sTrain").value = Math.round(S.split.train * 100);
+      $("sInfer").value = Math.round(S.split.infer * 100);
+      $("sInterp").value = Math.round(S.split.interp * 100);
+    }
+    $("cHint").textContent =
+      S.epoch >= 3
+        ? "Every chip serving customers is a chip not training. Interpretability buys Insight for alignment."
+        : "Every chip serving customers is a chip not training.";
+
+    // buy amount buttons
+    document.querySelectorAll("#buyAmtWrap button").forEach(function (b) {
+      b.className = String(UI.buyAmt) === b.dataset.amt ? "on" : "";
+    });
+
+    renderHardware(d);
+    renderProducts();
+    renderPower();
+    renderCooling();
+    renderMilestoneStrip();
+    renderTicker();
+    renderTab(d);
+    applyEpochSkin(false);
+  }
+
+  function renderHardware(d) {
+    var list = $("hwList");
+    list.innerHTML = "";
+    var anyOwned = false;
+    for (var g = 0; g < G.GENS.length; g++) {
+      var n = S.chips[g] || 0;
+      if (n <= 0 && g !== S.gen) continue;
+      anyOwned = true;
+      var gen = G.GENS[g];
+      var powered = Math.floor(n * d.powFrac);
+      var row = h("div", { cls: "genrow" });
+      row.innerHTML =
+        "<span>" +
+        esc(gen.nm) +
+        (g === S.gen ? ' <span class="accent">●</span>' : "") +
+        "</span>" +
+        "<span>" +
+        (d.powFrac < 1
+          ? "<b>" +
+            fnum(powered, 0) +
+            '</b><span class="chipgray"> ⚡ / ' +
+            fnum(n - powered, 0) +
+            " dark</span>"
+          : "<b>" + fnum(n, 0) + "</b>") +
+        ' <span class="sub">' +
+        fnum(gen.f) +
+        " F/s</span></span>";
+      list.appendChild(row);
+    }
+    if (!anyOwned) list.innerHTML = '<div class="sub">No hardware yet.</div>';
+
+    // buy current gen
+    var buy = $("hwBuy");
+    buy.innerHTML = "";
+    var cur = G.GENS[S.gen];
+    var canBase =
+      S.epoch >= cur.reqE &&
+      G.bgte(S.cumFlops, G.bn(cur.reqF)) &&
+      (!cur.reqUp || G.lv(S, cur.reqUp) > 0);
+    var amt = UI.buyAmt === "max" ? G.chipMaxAffordable(S, S.gen) : UI.buyAmt;
+    var cost = amt > 0 ? G.chipCost(S, S.gen, amt) : G.chipCost(S, S.gen, 1);
+    var b = h("button", {
+      text:
+        "BUY " +
+        (UI.buyAmt === "max" ? "MAX (" + fnum(amt, 0) + ")" : "×" + UI.buyAmt) +
+        " — $" +
+        fmt(cost),
+    });
+    b.style.width = "100%";
+    b.style.marginTop = "6px";
+    b.disabled = !canBase || amt <= 0 || !G.bgte(S.money, cost);
+    b.onclick = function () {
+      G.act.buyChips(S, S.gen, UI.buyAmt === "max" ? "max" : UI.buyAmt);
+      renderSlow();
+    };
+    buy.appendChild(b);
+
+    var fabEl = $("hwFab");
+    if (cur.fab != null) {
+      fabEl.style.display = "";
+      fabEl.textContent =
+        "Fab-constrained: " +
+        Math.floor(S.fabCred) +
+        " chips ready (+" +
+        fnum(d.fabRate, 1) +
+        "/s from fabs)";
+    } else fabEl.style.display = "none";
+
+    // adopt next gen
+    var ad = $("hwAdopt");
+    ad.innerHTML = "";
+    var next = S.gen + 1;
+    if (next < G.GENS.length) {
+      var ng = G.GENS[next];
+      var ok =
+        S.epoch >= ng.reqE &&
+        G.bgte(S.cumFlops, G.bn(ng.reqF)) &&
+        (!ng.reqUp || G.lv(S, ng.reqUp) > 0);
+      var abtn = h("button", {
+        text: "ADOPT " + ng.nm + " (trade in old fleet @30%)",
+      });
+      abtn.style.width = "100%";
+      abtn.style.marginTop = "6px";
+      abtn.disabled = !ok;
+      if (!ok) {
+        var why =
+          S.epoch < ng.reqE
+            ? "epoch " + ng.reqE
+            : ng.reqUp && !G.lv(S, ng.reqUp)
+              ? G.UPX[ng.reqUp].nm
+              : "1e" + Math.round(Math.log10(ng.reqF)) + " cum FLOPs";
+        abtn.textContent += " — needs " + why;
+      }
+      abtn.onclick = function () {
+        G.act.adoptGen(S, next);
+        renderSlow();
+      };
+      ad.appendChild(abtn);
+    }
+  }
+
+  function renderProducts() {
+    var pl = $("prodList");
+    pl.innerHTML = "";
+    var ttc = G.lv(S, "a_ttc") > 0;
+    $("ttcHint").textContent = ttc
+      ? "smart: ×10 FLOPs/query, ×25 value (net ×2.5)"
+      : "";
+    [
+      ["chat", "Assistant Chat"],
+      ["api", "Developer API"],
+      ["agents", "Enterprise Agents"],
+    ].forEach(function (p) {
+      var id = p[0];
+      if (!S.prods[id].on) return;
+      var row = h("div", { cls: "prod" });
+      var mode = S.prods[id].mode;
+      row.innerHTML = "<span>" + p[1] + "</span>";
+      var sw = h("span", { cls: "modeswitch" });
+      var bf = h("button", {
+        cls: "tiny" + (mode === "fast" ? " on" : ""),
+        text: "fast·cheap",
+      });
+      var bs = h("button", {
+        cls: "tiny" + (mode === "smart" ? " on" : ""),
+        text: "slow·smart",
+      });
+      bs.disabled = !ttc;
+      bf.onclick = function () {
+        G.act.setProdMode(S, id, "fast");
+        renderSlow();
+      };
+      bs.onclick = function () {
+        G.act.setProdMode(S, id, "smart");
+        renderSlow();
+      };
+      sw.appendChild(bf);
+      sw.appendChild(bs);
+      row.appendChild(sw);
+      pl.appendChild(row);
+    });
+  }
+
+  function renderPower() {
+    var nx = $("pwNext");
+    nx.innerHTML = "";
+    var next = S.ptier + 1;
+    if (next >= G.PTIERS.length) return;
+    var t = G.PTIERS[next];
+    var blockedPermit = t.permit && S.backlash > G.BAL.permitBlock;
+    var b = h("button", {
+      text: "BUILD " + t.nm + " (" + fnum(t.mw) + " MW) — $" + fnum(t.c),
+    });
+    b.style.width = "100%";
+    b.style.marginTop = "6px";
+    var gated = (t.reqE && S.epoch < t.reqE) || (t.reqUp && !G.lv(S, t.reqUp));
+    b.disabled = gated || blockedPermit || !G.bgte(S.money, G.bn(t.c));
+    if (gated)
+      b.textContent +=
+        t.reqUp && !G.lv(S, t.reqUp)
+          ? " — needs " + G.UPX[t.reqUp].nm
+          : " — epoch " + t.reqE;
+    if (blockedPermit) b.textContent += " — PERMIT FROZEN";
+    b.onclick = function () {
+      G.act.buyPower(S);
+      renderSlow();
+    };
+    nx.appendChild(b);
+  }
+  function renderCooling() {
+    var nx = $("clNext");
+    nx.innerHTML = "";
+    var next = S.cool + 1;
+    if (next >= G.CTIERS.length) return;
+    var t = G.CTIERS[next];
+    var b = h("button", {
+      text: "INSTALL " + t.nm + " (PUE " + t.pue + ") — $" + fnum(t.c),
+    });
+    b.style.width = "100%";
+    b.style.marginTop = "6px";
+    var gated = t.reqOrbital && !G.PTIERS[S.ptier].orbital;
+    b.disabled = gated || !G.bgte(S.money, G.bn(t.c));
+    if (gated) b.textContent += " — needs orbital platform";
+    b.onclick = function () {
+      G.act.buyCool(S);
+      renderSlow();
+    };
+    nx.appendChild(b);
+  }
+
+  function renderMilestoneStrip() {
+    for (var i = 0; i < G.MILESTONES.length; i++) {
+      $("ms" + i).classList.toggle("hit", !!S.ms[i]);
+    }
+  }
+  function renderTicker() {
+    var items = S.news.slice(-10);
+    var htmlStr = items
+      .map(function (n) {
+        return '<span class="n-' + n.cls + '">◆ ' + esc(n.txt) + "</span>";
+      })
+      .join("");
+    var el = $("tickerIn");
+    if (el._last !== htmlStr) {
+      el.innerHTML = htmlStr;
+      el._last = htmlStr;
+    }
+  }
+
+  /* ---------------- right panel tabs ---------------- */
+  function renderTab(d) {
+    var body = $("tabBody");
+    document.querySelectorAll(".tabs button").forEach(function (b) {
+      b.classList.toggle("on", b.dataset.tab === UI.tab);
+    });
+    if (UI.tab === "research") return renderResearch(body);
+    if (UI.tab === "prestige") return renderPrestige(body);
+    if (UI.tab === "stats") return renderStatsInto(body, d);
+    if (UI.tab === "settings") return renderSettings(body);
+    if (UI.tab === "debug") return renderDebug(body);
+  }
+
+  function upBuyN(id, n) {
+    var count = n === "max" ? 1000 : n;
+    var bought = 0;
+    for (var i = 0; i < count; i++) {
+      if (!G.act.buyUp(S, id)) break;
+      bought++;
+    }
+    return bought;
+  }
+  function renderResearch(body) {
+    body.innerHTML = "";
+    var groups = {};
+    G.UPS.forEach(function (u) {
+      var lvl = G.lv(S, u.id);
+      var visible = G.upAvailable(S, u.id) || lvl > 0;
+      if (!visible) return;
+      (groups[u.br] = groups[u.br] || []).push(u);
+    });
+    BRANCH_ORDER.forEach(function (br) {
+      if (!groups[br]) return;
+      var sec = h("div", { cls: "branch" });
+      sec.appendChild(h("h4", { text: BRANCH_LABEL[br] }));
+      groups[br].forEach(function (u) {
+        var lvl = G.lv(S, u.id);
+        var maxed = lvl >= (u.max || 1);
+        var card = h("div", { cls: "upg" + (maxed ? " owned" : "") });
+        var costStr = "";
+        if (!maxed) {
+          var c = G.upCost(S, u.id);
+          var parts = [];
+          if (u.cost.m) parts.push("$" + fmt(c.m));
+          if (u.cost.r) parts.push(fnum(c.r, 0) + " research");
+          if (u.cost.i) parts.push(fnum(c.i, 0) + " insight");
+          costStr = parts.join(" + ");
+        }
+        card.innerHTML =
+          '<div class="t"><span>' +
+          esc(u.nm) +
+          '</span><span class="lvl">' +
+          (u.max > 1 ? "lv " + lvl + "/" + u.max : maxed ? "DONE" : "") +
+          "</span></div>" +
+          '<div class="d">' +
+          esc(u.desc) +
+          "</div>";
+        if (!maxed) {
+          var cRow = h("div", { cls: "c" });
+          cRow.appendChild(h("span", { cls: "cost", text: costStr }));
+          var canMulti = (u.max || 1) > 1;
+          var n = canMulti ? UI.buyAmt : 1;
+          var btn = h("button", {
+            cls: "tiny",
+            text:
+              canMulti && n !== 1
+                ? "BUY " + (n === "max" ? "MAX" : "×" + n)
+                : "BUY",
+          });
+          btn.disabled = !G.canAfford(S, u.id) || !G.upAvailable(S, u.id);
+          btn.onclick = function () {
+            upBuyN(u.id, n);
+            renderSlow();
+          };
+          cRow.appendChild(btn);
+          card.appendChild(cRow);
+        }
+        sec.appendChild(card);
+      });
+      body.appendChild(sec);
+    });
+    if (!body.children.length)
+      body.innerHTML = '<div class="sub">Nothing to research yet.</div>';
+  }
+
+  function renderPrestige(body) {
+    body.innerHTML = "";
+    var dOk = G.hasMs(S, "chatbot");
+    var bonus = G.distillBonus(S);
+    var card1 = h("div", { cls: "upg" });
+    card1.innerHTML =
+      '<div class="t"><span>DISTILLATION</span><span class="lvl">' +
+      S.distills +
+      " so far</span></div>" +
+      '<div class="d">Reset compute / hardware / power for a permanent ×(1 + 0.15·log₁₀ peak capability) multiplier. Research, milestones, staff and money carry over.</div>' +
+      '<div class="c"><span class="cost">' +
+      (dOk ? "ready: ×" + bonus.toFixed(2) : "requires the chatbot moment") +
+      "</span></div>";
+    var b1 = h("button", { text: "DISTILL NOW (×" + bonus.toFixed(2) + ")" });
+    b1.style.width = "100%";
+    b1.style.marginTop = "4px";
+    b1.disabled = !dOk || bonus <= 1.01;
+    b1.onclick = confirmDistill;
+    card1.appendChild(b1);
+    body.appendChild(card1);
+
+    var card2 = h("div", { cls: "upg" });
+    card2.innerHTML =
+      '<div class="t"><span>ASCENSION</span><span class="lvl">' +
+      S.ascensions +
+      " star(s)</span></div>" +
+      '<div class="d">On reaching Kardashev I: prestige into a new star system. FULL reset, permanent ×(1 + 0.25·log₁₀ peak capability), new-game-plus.</div>' +
+      '<div class="c"><span class="cost">' +
+      (S.k1
+        ? "THE SWARM IS COMPLETE"
+        : "requires Kardashev I (Dyson swarm 100%)") +
+      "</span></div>";
+    var b2 = h("button", {
+      text: "ASCEND (×" + G.ascendBonus(S).toFixed(2) + ")",
+    });
+    b2.style.width = "100%";
+    b2.style.marginTop = "4px";
+    b2.disabled = !S.k1;
+    b2.onclick = confirmAscend;
+    card2.appendChild(b2);
+    body.appendChild(card2);
+
+    var mult = h("div", { cls: "sub" });
+    mult.style.marginTop = "8px";
+    mult.textContent =
+      "Current permanent multipliers — distillation ×" +
+      S.distillMult.toFixed(2) +
+      ", ascension ×" +
+      S.ascendMult.toFixed(2);
+    body.appendChild(mult);
+  }
+
+  function renderStatsInto(body, d) {
+    d = d || G.derive(S);
+    var rows = [
+      ["Game time", (S.t / 60).toFixed(1) + " min"],
+      ["Epoch", S.epoch + (S.fork ? " (" + S.fork + ")" : "")],
+      ["Cumulative training FLOPs", fmt(S.cumFlops)],
+      ["Current loss L", d.L.toFixed(4)],
+      ["Irreducible loss E", String(G.BAL.E)],
+      [
+        "Distance off compute-optimal",
+        (d.waste * 100).toFixed(1) + "% compute wasted",
+      ],
+      [
+        "Allocation x (params share)",
+        d.x.toFixed(3) + " (optimal " + d.optX.toFixed(3) + ")",
+      ],
+      ["Parameters N", isFinite(d.logN) ? fmt(G.bl(d.logN)) : "0"],
+      ["Training tokens D", isFinite(d.logD) ? fmt(G.bl(d.logD)) : "0"],
+      ["Trained data quality", d.trainedQ.toFixed(3)],
+      ["PUE", d.pue.toFixed(2)],
+      ["Facility draw", d.facMW.toFixed(1) + " / " + fnum(d.mwCap) + " MW"],
+      ["Water use", fnum(d.water, 0) + " L/s"],
+      ["Public backlash", S.backlash.toFixed(1)],
+      [
+        "Algorithmic efficiency",
+        "2^" + S.algoDoublings + " = ×" + fmt(G.bl(S.algoLog)),
+      ],
+      ["Agent reliability", (G.reliability(S) * 100).toFixed(0) + "%"],
+      ["Alignment score", d.alignScore.toFixed(1)],
+      [
+        "Oversight erosion",
+        S.fork === "race"
+          ? S.erosion.toFixed(1) + "%"
+          : S.fork === "slowdown"
+            ? "n/a (slowdown)"
+            : "—",
+      ],
+      ["Dyson swarm", (S.swarm * 100).toFixed(2) + "%"],
+      ["Lifetime money", "$" + fmt(S.stats.lifeMoney)],
+      ["Lifetime data", fmt(S.stats.lifeData)],
+      ["Manual clicks", fnum(S.stats.clicks, 0)],
+      ["Rule repairs", fnum(S.stats.repairs, 0)],
+      ["Distillations / Ascensions", S.distills + " / " + S.ascensions],
+      [
+        "Peak capability (this run)",
+        isFinite(S.peakCapLog) ? fmt(G.bl(S.peakCapLog)) : "—",
+      ],
+    ];
+    var htmlStr =
+      '<div class="statgrid">' +
+      rows
+        .map(function (r) {
+          return (
+            '<span class="k">' +
+            r[0] +
+            '</span><span class="v">' +
+            r[1] +
+            "</span>"
+          );
+        })
+        .join("") +
+      "</div>";
+    if (body._stats !== htmlStr) {
+      body.innerHTML = htmlStr;
+      body._stats = htmlStr;
+    }
+  }
+
+  function renderSettings(body) {
+    body.innerHTML = "";
+    var fm = h("div", { cls: "upg" });
+    fm.innerHTML = '<div class="t"><span>Number format</span></div>';
+    var r = h("div", { cls: "c" });
+    var bNamed = h("button", {
+      cls: "tiny" + (S.fmtMode !== "sci" ? " on" : ""),
+      text: "Named (1.5 Septillion)",
+    });
+    var bSci = h("button", {
+      cls: "tiny" + (S.fmtMode === "sci" ? " on" : ""),
+      text: "Scientific (1.5e24)",
+    });
+    bNamed.onclick = function () {
+      S.fmtMode = "named";
+      renderSlow();
+    };
+    bSci.onclick = function () {
+      S.fmtMode = "sci";
+      renderSlow();
+    };
+    r.appendChild(bNamed);
+    r.appendChild(bSci);
+    fm.appendChild(r);
+    body.appendChild(fm);
+
+    var sv = h("div", { cls: "upg" });
+    sv.innerHTML =
+      '<div class="t"><span>Save</span></div><div class="d">Auto-saves every 30s. Manual controls:</div>';
+    var rr = h("div", { cls: "c" });
+    var bSave = h("button", { cls: "tiny", text: "Save now" });
+    bSave.onclick = function () {
+      saveGame();
+      toast("saved");
+    };
+    var bExp = h("button", { cls: "tiny", text: "Export" });
+    bExp.onclick = function () {
+      var r2 = btnRow([
+        {
+          t: "Copy to clipboard",
+          fn: function () {
+            var ta = document.querySelector("#modal textarea");
+            ta.select();
+            document.execCommand("copy");
+            toast("copied");
+          },
+        },
+        { t: "Close", fn: closeModal, primary: true },
+      ]);
+      showModal(
+        "<h2>Export save</h2><textarea readonly>" +
+          G.exportSave(S) +
+          "</textarea>" +
+          r2.html,
+      );
+      r2.wire();
+    };
+    var bImp = h("button", { cls: "tiny", text: "Import" });
+    bImp.onclick = function () {
+      var r2 = btnRow([
+        {
+          t: "Load",
+          fn: function () {
+            try {
+              var ns = G.importSave(
+                document.querySelector("#modal textarea").value,
+              );
+              S = ns;
+              applyEpochSkin(true);
+              closeModal();
+              toast("imported");
+              UI.seenMs = S.ms.slice();
+              UI.seenEpoch = S.epoch;
+              UI.seenK1 = S.k1;
+              UI.seenFork = !!S.fork || !!S.pace.fork;
+            } catch (e) {
+              toast("invalid save string");
+            }
+          },
+          primary: true,
+        },
+        { t: "Cancel", fn: closeModal },
+      ]);
+      showModal(
+        '<h2>Import save</h2><p class="sub">Paste a save string:</p><textarea></textarea>' +
+          r2.html,
+      );
+      r2.wire();
+    };
+    var bReset = h("button", { cls: "tiny", text: "HARD RESET" });
+    bReset.onclick = function () {
+      var r2 = btnRow([
+        {
+          t: "Yes, erase everything",
+          fn: function () {
+            localStorage.removeItem(SAVE_KEY);
+            S = G.newState();
+            UI.seenMs = [];
+            UI.seenEpoch = 1;
+            UI.seenK1 = false;
+            UI.seenFork = false;
+            applyEpochSkin(true);
+            closeModal();
+          },
+        },
+        { t: "Cancel", fn: closeModal, primary: true },
+      ]);
+      showModal(
+        "<h2>Hard reset?</h2><p>This erases your save, prestige multipliers included.</p>" +
+          r2.html,
+        "dark",
+      );
+      r2.wire();
+    };
+    rr.appendChild(bSave);
+    rr.appendChild(bExp);
+    rr.appendChild(bImp);
+    rr.appendChild(bReset);
+    sv.appendChild(rr);
+    body.appendChild(sv);
+
+    var ab = h("div", { cls: "sub" });
+    ab.style.marginTop = "10px";
+    ab.innerHTML =
+      "SINGULARITY — an ML-accurate incremental. L(N,D) = 1.69 + 406.4/N<sup>0.34</sup> + 410.7/D<sup>0.28</sup>. Keyboard: SPACE/D = click.";
+    body.appendChild(ab);
+  }
+
+  /* ---------------- debug mode (Konami code or ?debug to enable) ---------------- */
+  function debugBackup() {
+    try {
+      if (!localStorage.getItem("sing_debug_backup")) {
+        var cur = localStorage.getItem(SAVE_KEY);
+        localStorage.setItem(
+          "sing_debug_backup",
+          cur || JSON.stringify({ wall: Date.now(), s: G.serialize(S) }),
+        );
+        toast("pre-debug save backed up");
+      }
+    } catch (err) {}
+  }
+  function debugAdopt(ns, label) {
+    S = ns;
+    UI.seenMs = S.ms.slice();
+    UI.seenEpoch = S.epoch;
+    UI.seenK1 = S.k1;
+    UI.seenFork = !!S.fork;
+    UI.winterShown = S.flags.winter;
+    UI.wallShown = S.flags.wall;
+    if (S.ended === "loss") UI.lostShown = false;
+    UI.globeSig = undefined;
+    UI.tab = "debug";
+    applyEpochSkin(true);
+    renderSlow();
+    toast(label + " — t=" + (S.t / 60).toFixed(0) + "m");
+  }
+  var DEBUG_JUMPS = [
+    ["AI Winter (E1)", { target: "winter", minutes: 15 }],
+    ["Epoch 2 start", { target: "e1done", minutes: 25 }],
+    ["AlexNet 1e17", { target: "alexnet", minutes: 45 }],
+    ["Chatbot moment", { target: "chatbot", minutes: 60 }],
+    ["Epoch 3 (agents)", { target: "epoch3", minutes: 75 }],
+    ["Takeoff", { target: "takeoff", minutes: 110 }],
+    ["The Fork (you choose)", { target: "fork", minutes: 130 }],
+    [
+      "Epoch 6 · Race",
+      { target: "epoch6", minutes: 170, scenario: { path: "race", align: true } },
+    ],
+    [
+      "Epoch 6 · Slowdown",
+      {
+        target: "epoch6",
+        minutes: 170,
+        scenario: { path: "slowdown", align: true },
+      },
+    ],
+    [
+      "Epoch 7 · swarm",
+      {
+        target: "epoch7",
+        minutes: 210,
+        scenario: { path: "slowdown", align: true },
+      },
+    ],
+    [
+      "Swarm 90%",
+      {
+        stopFn: function (s) {
+          return s.swarm >= 0.9;
+        },
+        minutes: 240,
+        scenario: { path: "slowdown", align: true },
+      },
+    ],
+    [
+      "Loss imminent (Race)",
+      {
+        stopFn: function (s) {
+          return s.erosion >= 85;
+        },
+        minutes: 220,
+        scenario: { path: "race", align: false },
+      },
+    ],
+  ];
+  function renderDebug(body) {
+    body.innerHTML = "";
+    var head = h("div", { cls: "sub" });
+    head.textContent =
+      "Jumps auto-play a fresh game with the simulator policy. Your pre-debug save is backed up (Safety, below).";
+    body.appendChild(head);
+
+    var jumpSec = h("div", { cls: "branch" });
+    jumpSec.appendChild(h("h4", { text: "Jump to" }));
+    var grid = h("div");
+    grid.style.cssText = "display:grid;grid-template-columns:1fr 1fr;gap:5px";
+    DEBUG_JUMPS.forEach(function (jd) {
+      var b = h("button", { cls: "tiny", text: jd[0] });
+      b.onclick = function () {
+        debugBackup();
+        b.textContent = "running…";
+        setTimeout(function () {
+          debugAdopt(G.debugRun(jd[1]), jd[0]);
+        }, 20);
+      };
+      grid.appendChild(b);
+    });
+    jumpSec.appendChild(grid);
+    body.appendChild(jumpSec);
+
+    var ffSec = h("div", { cls: "branch" });
+    ffSec.appendChild(h("h4", { text: "Fast-forward (autoplay from now)" }));
+    var ffRow = h("div");
+    ffRow.style.cssText = "display:flex;gap:5px;flex-wrap:wrap";
+    [5, 15, 60].forEach(function (m) {
+      var b = h("button", { cls: "tiny", text: "+" + m + " min" });
+      b.onclick = function () {
+        debugBackup();
+        var sc = { path: S.fork || "slowdown", align: true };
+        debugAdopt(
+          G.debugRun({ from: S, minutes: m, scenario: sc }),
+          "+" + m + "m",
+        );
+      };
+      ffRow.appendChild(b);
+    });
+    ffSec.appendChild(ffRow);
+    body.appendChild(ffSec);
+
+    var spSec = h("div", { cls: "branch" });
+    spSec.appendChild(h("h4", { text: "Game speed" }));
+    var spRow = h("div");
+    spRow.style.cssText = "display:flex;gap:5px";
+    [1, 2, 5, 20].forEach(function (x) {
+      var b = h("button", {
+        cls: "tiny" + (S.devSpeed === x ? " on" : ""),
+        text: "×" + x,
+      });
+      b.onclick = function () {
+        S.devSpeed = x;
+        renderSlow();
+      };
+      spRow.appendChild(b);
+    });
+    spSec.appendChild(spRow);
+    body.appendChild(spSec);
+
+    var chSec = h("div", { cls: "branch" });
+    chSec.appendChild(h("h4", { text: "Cheats" }));
+    var chRow = h("div");
+    chRow.style.cssText = "display:grid;grid-template-columns:1fr 1fr;gap:5px";
+    var CHEATS = [
+      [
+        "Money ×100",
+        function () {
+          S.money = G.bmul(S.money, G.bn(100));
+        },
+      ],
+      [
+        "+1e6 research",
+        function () {
+          S.research += 1e6;
+        },
+      ],
+      [
+        "+1e4 insight",
+        function () {
+          S.insight += 1e4;
+        },
+      ],
+      [
+        "Data ×100",
+        function () {
+          S.data = G.bmul(S.data, G.bn(100));
+          S.dataQMass = G.bmul(S.dataQMass, G.bn(100));
+        },
+      ],
+      [
+        "Backlash → 0",
+        function () {
+          S.backlash = 0;
+        },
+      ],
+      [
+        "Erosion → 0",
+        function () {
+          S.erosion = 0;
+        },
+      ],
+      [
+        "+1e4 fab credits",
+        function () {
+          S.fabCred += 1e4;
+        },
+      ],
+      [
+        "Clear ending",
+        function () {
+          S.ended = null;
+        },
+      ],
+    ];
+    CHEATS.forEach(function (cd) {
+      var b = h("button", { cls: "tiny", text: cd[0] });
+      b.onclick = function () {
+        debugBackup();
+        cd[1]();
+        toast(cd[0]);
+      };
+      chRow.appendChild(b);
+    });
+    chSec.appendChild(chRow);
+    body.appendChild(chSec);
+
+    var rsSec = h("div", { cls: "branch" });
+    rsSec.appendChild(h("h4", { text: "Safety" }));
+    var rb = h("button", { cls: "tiny", text: "Restore pre-debug save" });
+    rb.onclick = function () {
+      try {
+        var bk = localStorage.getItem("sing_debug_backup");
+        if (!bk) return toast("no backup found");
+        var obj = JSON.parse(bk);
+        debugAdopt(G.deserialize(obj.s), "restored backup");
+        localStorage.removeItem("sing_debug_backup");
+      } catch (err) {
+        toast("restore failed");
+      }
+    };
+    rsSec.appendChild(rb);
+    body.appendChild(rsSec);
+  }
+
+  /* ---------------- charts ---------------- */
+  function drawFrontier(d) {
+    var cv = $("frontier");
+    if (!cv || cv.offsetParent === null) return;
+    var ctx = cv.getContext("2d");
+    var W = cv.width,
+      H = cv.height;
+    var css = getComputedStyle(document.body);
+    var cAccent = css.getPropertyValue("--accent").trim();
+    var cDim = css.getPropertyValue("--dim").trim();
+    var cInk = css.getPropertyValue("--ink").trim();
+    var cBad = css.getPropertyValue("--bad").trim();
+    ctx.clearRect(0, 0, W, H);
+    if (!isFinite(d.logCeff) || d.logCeff < 8) return;
+
+    // axes: logN (x) vs logD (y), window around current compute
+    var logC6 = d.logCeff - Math.log10(6);
+    var span = Math.max(6, logC6 * 0.55);
+    var nMin = Math.max(2, logC6 * 0.5 - span / 2),
+      nMax = logC6 * 0.5 + span / 2 + 2;
+    var dMin = nMin,
+      dMax = nMax;
+    function X(n) {
+      return 34 + ((n - nMin) / (nMax - nMin)) * (W - 44);
+    }
+    function Y(dd) {
+      return H - 18 - ((dd - dMin) / (dMax - dMin)) * (H - 28);
+    }
+
+    ctx.strokeStyle = cDim;
+    ctx.lineWidth = 1;
+    ctx.globalAlpha = 0.5;
+    ctx.strokeRect(34, 10, W - 44, H - 28);
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = cDim;
+    ctx.font = "10px sans-serif";
+    ctx.fillText("log N (params) →", W - 120, H - 4);
+    ctx.save();
+    ctx.translate(10, H / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillText("log D (tokens) →", -40, 0);
+    ctx.restore();
+
+    // iso-compute line for current C: logN + logD = logC6
+    ctx.strokeStyle = cDim;
+    ctx.setLineDash([4, 3]);
+    ctx.beginPath();
+    var drew = false;
+    for (var n = nMin; n <= nMax; n += 0.1) {
+      var dd = logC6 - n;
+      if (dd < dMin || dd > dMax) continue;
+      if (!drew) {
+        ctx.moveTo(X(n), Y(dd));
+        drew = true;
+      } else ctx.lineTo(X(n), Y(dd));
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // compute-optimal frontier across compute scales
+    ctx.strokeStyle = cAccent;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    var first = true;
+    for (var lc = Math.max(4, logC6 - span); lc <= logC6 + span; lc += 0.15) {
+      var xo = G.optX(lc);
+      var pn = lc * xo,
+        pd = lc * (1 - xo);
+      if (pn < nMin || pn > nMax || pd < dMin || pd > dMax) {
+        first = true;
+        continue;
+      }
+      if (first) {
+        ctx.moveTo(X(pn), Y(pd));
+        first = false;
+      } else ctx.lineTo(X(pn), Y(pd));
+    }
+    ctx.stroke();
+
+    // optimal point at current C
+    var xopt = d.optX;
+    ctx.fillStyle = cAccent;
+    ctx.beginPath();
+    ctx.arc(X(logC6 * xopt), Y(logC6 * (1 - xopt)), 4, 0, 7);
+    ctx.fill();
+
+    // your model
+    ctx.fillStyle = d.waste > 0.25 ? cBad : cInk;
+    ctx.beginPath();
+    ctx.arc(X(d.logN), Y(d.logD), 5, 0, 7);
+    ctx.fill();
+    ctx.fillStyle = cInk;
+    ctx.font = "10px sans-serif";
+    ctx.fillText("you", X(d.logN) + 7, Y(d.logD) + 3);
+    ctx.fillStyle = cAccent;
+    ctx.fillText("compute-optimal frontier", 40, 20);
+  }
+
+  /* ---------------- planetary build-out globe (Earth -> Orbit -> Sol) ---------------- */
+  var GLOBE_PTS = null;
+  function globePoints() {
+    if (GLOBE_PTS) return GLOBE_PTS;
+    GLOBE_PTS = [];
+    var seed = 987654321;
+    function r() {
+      seed = (seed * 1103515245 + 12345) % 2147483648;
+      return seed / 2147483648;
+    }
+    for (var i = 0; i < 700; i++) {
+      GLOBE_PTS.push([Math.asin(2 * r() - 1), 2 * Math.PI * r()]);
+    }
+    return GLOBE_PTS;
+  }
+  function globeProgress(d) {
+    // surface industrialization: log-scale facility watts, 1 kW -> 20 TW
+    var itW = d.itMW * 1e6;
+    if (itW <= 0) return 0;
+    return Math.max(0, Math.min(1, (Math.log10(itW) - 3) / 10.3));
+  }
+  function globeBuilt(prog, d) {
+    var n = Math.floor(Math.pow(prog, 2.2) * 700);
+    if (n < 1 && d.itMW > 0) n = 1; // the first server room is a single brave dot
+    return Math.min(700, n);
+  }
+  function renderGlobe(d) {
+    var panel = $("pGlobe");
+    if (!panel || panel.style.display === "none") return;
+    // purchases since last frame -> radar blips
+    var totalChips = 0;
+    for (var g = 0; g < G.GENS.length; g++) totalChips += S.chips[g] || 0;
+    var sig = totalChips + S.ptier * 1e9 + S.cool * 1e12;
+    if (UI.globeSig !== undefined && sig > UI.globeSig) {
+      var builtNow = globeBuilt(globeProgress(d), d);
+      UI.blips = UI.blips || [];
+      var nNew = Math.min(4, 1 + Math.floor(Math.log10(1 + sig - UI.globeSig)));
+      for (var b = 0; b < nNew; b++)
+        UI.blips.push({
+          i: Math.floor(Math.random() * Math.min(700, builtNow + 8)),
+          t0: performance.now(),
+        });
+    }
+    UI.globeSig = sig;
+    // phase meter
+    if (S.epoch >= 7) {
+      $("globePhase").textContent = "phase 3 · SOL";
+      $("globeLab").textContent = "Dyson swarm coverage";
+      $("globeVal").textContent = (S.swarm * 100).toFixed(2) + "%";
+      $("globeBar").style.width = S.swarm * 100 + "%";
+      var sr =
+        G.BAL.swarmBatchRate * G.lv(S, "dy_batch") +
+        G.BAL.swarmRobo * G.lv(S, "i_robo");
+      $("swRate").textContent = "+" + (sr * 100 * 60).toFixed(2) + "%/min";
+    } else if (S.ptier >= 8) {
+      $("globePhase").textContent = "phase 2 · ORBIT";
+      $("globeLab").textContent = "Orbital industry";
+      var p2 = Math.max(
+        0,
+        Math.min(1, (Math.log10(Math.max(1, d.itMW * 1e6)) - 13) / 3),
+      );
+      $("globeVal").textContent = (p2 * 100).toFixed(1) + "%";
+      $("globeBar").style.width = p2 * 100 + "%";
+    } else {
+      $("globePhase").textContent = "phase 1 · EARTH";
+      $("globeLab").textContent = "Surface industrialization";
+      var p1 = globeProgress(d);
+      $("globeVal").textContent = (p1 * 100).toFixed(1) + "%";
+      $("globeBar").style.width = p1 * 100 + "%";
+    }
+    drawGlobe(d);
+  }
+  function drawGlobe(d) {
+    var cv = $("globe");
+    if (!cv || cv.offsetParent === null) return;
+    var ctx = cv.getContext("2d");
+    var W = cv.width,
+      H = cv.height;
+    ctx.clearRect(0, 0, W, H);
+    if (S.epoch >= 7) return drawSol(ctx, W, H);
+    var css = getComputedStyle(document.body);
+    var cAccent = css.getPropertyValue("--accent").trim();
+    var cDim = css.getPropertyValue("--dim").trim();
+    var cx = W / 2,
+      cy = H / 2 + 2,
+      R = H / 2 - 16;
+    // sphere + graticule
+    ctx.strokeStyle = cDim;
+    ctx.lineWidth = 1;
+    ctx.globalAlpha = 0.55;
+    ctx.beginPath();
+    ctx.arc(cx, cy, R, 0, 7);
+    ctx.stroke();
+    ctx.globalAlpha = 0.15;
+    for (var la = -60; la <= 60; la += 30) {
+      var ry = R * Math.sin((la * Math.PI) / 180);
+      var rr = R * Math.cos((la * Math.PI) / 180);
+      ctx.beginPath();
+      ctx.ellipse(cx, cy - ry, rr, rr * 0.24, 0, 0, 7);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    // facilities: the planet slowly disappears under datacenters
+    var rot = S.t * 0.05;
+    var pts = globePoints();
+    var built = globeBuilt(globeProgress(d), d);
+    for (var i = 0; i < built; i++) {
+      var lat = pts[i][0],
+        lon = pts[i][1] + rot;
+      var x = Math.cos(lat) * Math.sin(lon),
+        z = Math.cos(lat) * Math.cos(lon),
+        y = Math.sin(lat);
+      if (z < 0.03) continue;
+      ctx.fillStyle = cAccent;
+      ctx.globalAlpha = 0.3 + 0.7 * z;
+      ctx.fillRect(cx + x * R - 1.2, cy - y * R - 1.2, 2.4, 2.4);
+    }
+    ctx.globalAlpha = 1;
+    // purchase blips: expanding rings where something just got built
+    var now = performance.now();
+    UI.blips = (UI.blips || []).filter(function (bl) {
+      return now - bl.t0 < 900;
+    });
+    UI.blips.forEach(function (bl) {
+      var pp = pts[bl.i];
+      var lon2 = pp[1] + rot;
+      var x2 = Math.cos(pp[0]) * Math.sin(lon2),
+        z2 = Math.cos(pp[0]) * Math.cos(lon2),
+        y2 = Math.sin(pp[0]);
+      if (z2 < 0.03) return;
+      var age = (now - bl.t0) / 900;
+      ctx.strokeStyle = cAccent;
+      ctx.globalAlpha = 1 - age;
+      ctx.beginPath();
+      ctx.arc(cx + x2 * R, cy - y2 * R, 2 + age * 10, 0, 7);
+      ctx.stroke();
+    });
+    ctx.globalAlpha = 1;
+    // phase 2: orbital ring of satellites
+    if (S.ptier >= 8 || (S.epoch >= 6 && G.lv(S, "i_space") > 0)) {
+      var a = R * 1.35,
+        bb = R * 0.42,
+        phi = -0.3;
+      ctx.strokeStyle = cDim;
+      ctx.globalAlpha = 0.35;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, a, bb, phi, 0, 7);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = cAccent;
+      for (var sIdx = 0; sIdx < 26; sIdx++) {
+        var ang = (sIdx / 26) * Math.PI * 2 + S.t * 0.12;
+        var ex = a * Math.cos(ang),
+          ey = bb * Math.sin(ang);
+        var sx = cx + ex * Math.cos(phi) - ey * Math.sin(phi);
+        var sy = cy + ex * Math.sin(phi) + ey * Math.cos(phi);
+        ctx.fillRect(sx - 1, sy - 1, 2, 2);
+      }
+    }
+  }
+  function drawSol(ctx, W, H) {
+    var cx = W / 2,
+      cy = H / 2;
+    var grad = ctx.createRadialGradient(cx, cy, 2, cx, cy, 26);
+    grad.addColorStop(0, "#fff7cf");
+    grad.addColorStop(0.5, "#ffd166");
+    grad.addColorStop(1, "rgba(255,160,60,0)");
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 26, 0, 7);
+    ctx.fill();
+    var total = 240;
+    var built = Math.floor(total * S.swarm);
+    for (var i = 0; i < total; i++) {
+      var ang = (i / total) * Math.PI * 2 + S.t * 0.008;
+      var rr = 62 + 18 * Math.sin(i * 3.7);
+      var x = cx + Math.cos(ang) * rr * 1.35;
+      var y = cy + Math.sin(ang) * rr * 0.62;
+      ctx.fillStyle = i < built ? "#ffd166" : "rgba(120,130,200,0.18)";
+      ctx.beginPath();
+      ctx.arc(x, y, i < built ? 2.2 : 1.4, 0, 7);
+      ctx.fill();
+    }
+    // the fully industrialized Earth, small and far away
+    ctx.fillStyle = "#7bf1d9";
+    ctx.beginPath();
+    ctx.arc(24, H - 22, 5, 0, 7);
+    ctx.fill();
+  }
+
+  /* ---------------- starfield ---------------- */
+  var starData = null;
+  function initStars() {
+    var cv = $("stars");
+    cv.width = window.innerWidth;
+    cv.height = window.innerHeight;
+    starData = [];
+    for (var i = 0; i < 140; i++)
+      starData.push([
+        Math.random() * cv.width,
+        Math.random() * cv.height,
+        Math.random() * 1.6 + 0.4,
+      ]);
+    var ctx = cv.getContext("2d");
+    ctx.fillStyle = "#cfd6ff";
+    starData.forEach(function (s) {
+      ctx.globalAlpha = s[2] / 2;
+      ctx.fillRect(s[0], s[1], s[2], s[2]);
+    });
+    ctx.globalAlpha = 1;
+  }
+
+  /* ---------------- ghost cursor (epoch 4+) ---------------- */
+  function ghostTick() {
+    if (S.epoch < 4) return;
+    UI.ghostT++;
+    if (UI.ghostT % 40 !== 0) return; // every ~4s
+    var btns = Array.prototype.slice
+      .call(document.querySelectorAll("#colL button, #colR button"))
+      .filter(function (b) {
+        return b.offsetParent !== null;
+      });
+    if (!btns.length) return;
+    var b = btns[Math.floor(Math.random() * btns.length)];
+    var r = b.getBoundingClientRect();
+    var g = $("ghost");
+    g.style.left = r.left + r.width / 2 + "px";
+    g.style.top = r.top + r.height / 2 + "px";
+    setTimeout(function () {
+      b.classList.add("ghostflash");
+      setTimeout(function () {
+        b.classList.remove("ghostflash");
+      }, 500);
+    }, 1100);
+  }
+
+  /* ---------------- epoch skin ---------------- */
+  function applyEpochSkin(force) {
+    var cls = EPOCH_META[S.epoch].cls + (S.fork ? " " + S.fork : "");
+    if (document.body._skin !== cls || force) {
+      var wasSet =
+        document.body._skin !== undefined && document.body._skin !== cls;
+      document.body.className = cls;
+      document.body._skin = cls;
+      if (wasSet) {
+        document.body.classList.add("reskin");
+        setTimeout(function () {
+          document.body.classList.remove("reskin");
+        }, 1500);
+      }
+    }
+  }
+
+  /* ---------------- event watcher: detect state changes worth celebrating ---------------- */
+  function watchEvents() {
+    // milestones
+    for (var i = 0; i < G.MILESTONES.length; i++) {
+      if (S.ms[i] && !UI.seenMs[i]) {
+        UI.seenMs[i] = true;
+        fanfareMilestone(i);
+      }
+    }
+    // epoch changes
+    if (S.epoch !== UI.seenEpoch) {
+      UI.seenEpoch = S.epoch;
+      applyEpochSkin(false);
+      fanfareEpoch(S.epoch);
+      renderSlow();
+    }
+    // winter
+    if (S.flags.winter && !UI.winterShown) {
+      UI.winterShown = true;
+      fanfareWinter();
+    }
+    // data wall
+    if (S.flags.wall && !UI.wallShown) {
+      UI.wallShown = true;
+      fanfareWall();
+    }
+    // fork
+    if (S.pace.fork && !S.fork && !UI.seenFork) {
+      UI.seenFork = true;
+      fanfareFork();
+    }
+    // loss
+    if (S.ended === "loss" && !UI.lostShown) {
+      UI.lostShown = true;
+      fanfareLoss();
+    }
+    // k1
+    if (S.k1 && !UI.seenK1) {
+      UI.seenK1 = true;
+      fanfareK1();
+    }
+  }
+
+  /* ---------------- persistence ---------------- */
+  function saveGame() {
+    try {
+      localStorage.setItem(
+        SAVE_KEY,
+        JSON.stringify({ wall: Date.now(), s: G.serialize(S) }),
+      );
+    } catch (e) {
+      /* storage full/blocked */
+    }
+  }
+  function loadGame() {
+    try {
+      var raw = localStorage.getItem(SAVE_KEY);
+      if (!raw) return null;
+      var obj = JSON.parse(raw);
+      var s = G.deserialize(obj.s);
+      var away = (Date.now() - obj.wall) / 1000;
+      return { s: s, away: away };
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /* ---------------- main loop ---------------- */
+  function start() {
+    var loaded = loadGame();
+    var offSum = null;
+    if (loaded) {
+      S = loaded.s;
+      if (loaded.away > 30) offSum = G.offline(S, loaded.away);
+    } else {
+      S = G.newState();
+    }
+    UI.seenMs = S.ms.slice();
+    UI.seenEpoch = S.epoch;
+    UI.seenK1 = S.k1;
+    UI.seenFork = !!S.fork;
+    UI.winterShown = S.flags.winter;
+    UI.wallShown = S.flags.wall;
+    UI.debug = false;
+    try {
+      UI.debug = localStorage.getItem("sing_debug") === "1";
+    } catch (err) {}
+    if (/[?&]debug/.test(location.search)) UI.debug = true;
+
+    buildSkeleton();
+    applyEpochSkin(true);
+    renderSlow();
+    renderFast();
+
+    if (offSum) offlineModal(offSum);
+    if (S.ended === "loss") {
+      UI.lostShown = false;
+    }
+
+    var last = performance.now();
+    var acc = 0,
+      slowAcc = 0,
+      saveAcc = 0;
+    setInterval(function () {
+      var now = performance.now();
+      var dt = Math.min(1, (now - last) / 1000);
+      last = now;
+      G.tick(S, dt);
+      watchEvents();
+      acc += dt;
+      slowAcc += dt;
+      saveAcc += dt;
+      if (acc >= 0.1) {
+        acc = 0;
+        try {
+          renderFast();
+        } catch (e) {
+          /* keep the loop alive */
+        }
+      }
+      if (slowAcc >= 0.5) {
+        slowAcc = 0;
+        renderSlow();
+        ghostTick();
+      }
+      if (saveAcc >= 30) {
+        saveAcc = 0;
+        saveGame();
+      }
+    }, 100);
+
+    window.addEventListener("beforeunload", saveGame);
+
+    // undocumented dev handle (used by the headless smoke test too)
+    window.SING = {
+      G: G,
+      get S() {
+        return S;
+      },
+      set S(v) {
+        S = v;
+        UI.seenMs = S.ms.slice();
+        UI.seenEpoch = S.epoch;
+        UI.seenK1 = S.k1;
+        UI.seenFork = !!S.fork;
+        UI.winterShown = S.flags.winter;
+        UI.wallShown = S.flags.wall;
+        applyEpochSkin(true);
+        renderSlow();
+      },
+    };
+  }
+  if (document.readyState === "loading")
+    document.addEventListener("DOMContentLoaded", start);
+  else start();
+})();
+
+</script>
+</body>
+</html>
